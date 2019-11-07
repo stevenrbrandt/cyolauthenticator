@@ -167,6 +167,7 @@ class CYOLAuthenticator(Authenticator):
           code_check = "disabled"
           code = ""
 
+        print('Code check: user entered "%s", right answer is "%s"' % (code, code_check))
         if mkuser(username, password, password2, code == code_check):
             return username
         else:
