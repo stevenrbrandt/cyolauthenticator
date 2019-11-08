@@ -4,15 +4,22 @@ cd /
 krb5kdc
 kadmind
 
-# from https://github.com/GoogleCloudPlatform/nfs-server-docker/blob/master/1/debian9/1.3/docker-entrypoint.sh
-rpcbind -w
-mount -t nfsd nfds /proc/fs/nfsd
-/usr/sbin/rpc.mountd -N 2 -V 3
-/usr/sbin/exportfs -r
-# -G 10 to reduce grace time to 10 seconds (the lowest allowed)
-/usr/sbin/rpc.nfsd -G 10 -N 2 -V 3
-/sbin/rpc.statd --no-notify
+# # from https://github.com/GoogleCloudPlatform/nfs-server-docker/blob/master/1/debian9/1.3/docker-entrypoint.sh
+# rpcbind -w
+# mount -t nfsd nfds /proc/fs/nfsd
+# /usr/sbin/rpc.mountd -N 2 -V 3
+# /usr/sbin/exportfs -r
+# # -G 10 to reduce grace time to 10 seconds (the lowest allowed)
+# /usr/sbin/rpc.nfsd -G 10 -N 2 -V 3
+# /sbin/rpc.statd --no-notify
 
+# Need to run in a "privileged" container for this!!
+mount -t nfsd nfds /proc/fs/nfsd
+
+service rpcbind start
+service nfs-kernel-server start
+
+service slapd start
 
 #cp --update /home/passwd /home/group /home/shadow /etc/
 

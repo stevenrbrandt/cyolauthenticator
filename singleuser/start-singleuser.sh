@@ -40,4 +40,5 @@ else
   NOTEBOOK_BIN="jupyterhub-singleuser"
 fi
 
-. /usr/local/bin/start.sh $NOTEBOOK_BIN $NOTEBOOK_ARGS "$@"
+#. /usr/local/bin/start.sh $NOTEBOOK_BIN $NOTEBOOK_ARGS "$@"
+$NOTEBOOK_BIN $NOTEBOOK_ARGS "$@"

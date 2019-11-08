@@ -12,6 +12,13 @@ c.KubeSpawner.debug = True
 
 c.KubeSpawner.profile_list = [
     {
+        'display_name': 'my singleuser container',
+        'default': True,
+        'kubespawner_override': {
+            'image': 'dstndstn/cyol-singleuser',
+        }
+    },
+    {
         'display_name': 'jupyterhub singleuser 1.0',
         'default': True,
         'kubespawner_override': {

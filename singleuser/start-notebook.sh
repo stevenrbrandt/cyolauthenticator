@@ -4,6 +4,10 @@
 
 set -e
 
+#mount -t nfs hub:/home /home
+
+ls /home
+
 wrapper=""
 if [[ "${RESTARTABLE}" == "yes" ]]; then
   wrapper="run-one-constantly"
@@ -13,7 +17,9 @@ if [[ ! -z "${JUPYTERHUB_API_TOKEN}" ]]; then
   # launched by JupyterHub, use single-user entrypoint
   exec /usr/local/bin/start-singleuser.sh "$@"
 elif [[ ! -z "${JUPYTER_ENABLE_LAB}" ]]; then
-  . /usr/local/bin/start.sh $wrapper jupyter lab "$@"
+  #. /usr/local/bin/start.sh $wrapper jupyter lab "$@"
+  $wrapper jupyter lab "$@"
 else
-  . /usr/local/bin/start.sh $wrapper jupyter notebook "$@"
+  #. /usr/local/bin/start.sh $wrapper jupyter notebook "$@"
+  $wrapper jupyter notebook "$@"
 fi

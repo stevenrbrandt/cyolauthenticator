@@ -120,6 +120,68 @@ RUN cat /tmp/krb5-passwd /tmp/krb5-passwd | krb5_newrealm
 COPY kadmin.script /tmp
 RUN cat /tmp/kadmin.script | kadmin.local && rm /tmp/kadmin.script
 
+RUN apt install -y --no-install-recommends nfs-server
+
+# Trying to NFS export /home doesn't work (it's an overlay filesystem)
+# Try exporting a separate mounted persistent disk.
+
+# GCP persistent disk: must format & mount first.
+# (have to do this on a non-COS VM, and have to delete other VMs so that
+#  they are not attached to the disk -- annoying!!!)
+# lsblk
+# mkfs.ext4 -m 0 -F -E lazy_itable_init=0,lazy_journal_init=0,discard /dev/sdb
+
+# When starting containerized VM, have to BOTH attach the existing
+# disk in the host, and also mount it into the container.
+
+# Host:
+#dlang@hub ~ $ mount | grep sdb
+#/dev/sdb on /mnt/disks/gce-containers-mounts/gce-persistent-disks/nfs-home type ext4 (rw,relatime)
+
+# kubectl apply -f ../config/nfs-pv.yaml
+# kubectl apply -f ../config/nfs-pvc.yaml
+
+# In workload -> deployment details, add to YAML under spec: containers:
+
+#        volumeMounts:
+#        - name: my-pvc-nfs
+#          mountPath: "/home"
+#      volumes:
+#      - name: my-pvc-nfs
+#        persistentVolumeClaim:
+#          claimName: nfs
+
+# https://medium.com/platformer-blog/nfs-persistent-volumes-with-kubernetes-a-case-study-ce1ed6e2c266
+
+RUN apt install slapd ldap-utils ldapscripts libnss-ldap
+COPY libnss-ldap.conf /etc/
+
+# ldapadd -x -D cn=admin,dc=hub -W -f /tmp/add_content.ldif
+
+# Test:
+# # ldapsearch -x -LLL -b dc=hub 'uid=test' cn gidNumber
+#dn: uid=test,ou=People,dc=hub
+#cn: Test Guy
+#gidNumber: 5000
+
+# On instance-1:
+# # ldapsearch -x -LLL -H ldap://hub -b dc=hub 'uid=test' cn gidNumber
+# dn: uid=test,ou=People,dc=hub
+# cn: Test Guy
+# gidNumber: 5000
+
+# https://help.ubuntu.com/lts/serverguide/openldap-server.html
+#  apt install libnss-ldap
+#  apt install ldap-auth-config
+#  dpkg-reconfigure ldap-auth-config
+#  python2 /usr/sbin/auth-client-config -t nss -p lac_ldap
+
+
+# /usr/share/doc/libpam-krb5/README.Debian.gz
+# https://wiki.debian.org/LDAP/Kerberos#PAM
+
+
+ADD slapd-conf.tgz /etc/ldap/
 COPY startup.sh /
 CMD bash startup.sh
 COPY inituser.sh /
@@ -129,7 +191,6 @@ ENV GOOGLE_APPLICATION_CREDENTIALS /svc.json
 EXPOSE 80
 EXPOSE 8081
 
-RUN apt install -y --no-install-recommends nfs-server
 RUN echo "/home 10.0.0.0/8(rw)" > /etc/exports
 # per https://github.com/GoogleCloudPlatform/nfs-server-docker/blob/master/1/debian9/1.3/Dockerfile
 EXPOSE 2049/tcp
