@@ -1,8 +1,16 @@
 cd /
 #echo jtest789 > /usr/enable_mkuser
 
-krb5kdc
-kadmind
+#krb5kdc
+#kadmind
+
+
+slappasswd -g > /tmp/slappasswd
+slappasswd -s $(cat /tmp/slappasswd) > /tmp/hashpass
+#echo -e "dn: olcDatabase={1}mdb,cn=config\nchangetype: modify\nadd: olcRootPW\nolcRootPW: $(cat /tmp/hashpass)\n" | ldapmodify -Q -Y EXTERNAL -H ldapi:///
+echo -e "dn: olcDatabase={1}mdb,cn=config\nreplace: olcRootPW\nolcRootPW: $(cat /tmp/hashpass)" | ldapmodify -Y EXTERNAL -H ldapi:///
+service slapd start
+
 
 # # from https://github.com/GoogleCloudPlatform/nfs-server-docker/blob/master/1/debian9/1.3/docker-entrypoint.sh
 # rpcbind -w
@@ -19,7 +27,6 @@ mount -t nfsd nfds /proc/fs/nfsd
 service rpcbind start
 service nfs-kernel-server start
 
-service slapd start
 
 #cp --update /home/passwd /home/group /home/shadow /etc/
 

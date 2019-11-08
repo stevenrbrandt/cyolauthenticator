@@ -28,7 +28,6 @@ COPY login.html /usr/local/share/jupyterhub/templates/login.html
 COPY error.html /usr/local/share/jupyterhub/templates/error.html
 
 # Replace logo.png with whatever logo you wish to use to brand the server
-#COPY logo.png /usr/local/share/jupyterhub/static/images/logo.png
 COPY pi-logo.png /usr/local/share/jupyterhub/static/images/logo.png
 
 RUN mkdir -p /usr/local/lib/python3.5/dist-packages/cyolauthenticator
@@ -46,9 +45,6 @@ RUN tar xvz -C /usr/local --strip-components 1 -f julia-1.2.0-linux-x86_64.tar.g
 # docker run -it -p 8802:80 cyol
 
 
-
-
-
 ### Dustin -- try adding gcloud for launching notebook servers in gcloud kubernetes!
 
 RUN echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
@@ -59,7 +55,7 @@ RUN apt update && apt install -y google-cloud-sdk kubectl
 RUN pip install kubernetes==9.0.1 # && pip install jupyterhub-kubespawner
 RUN apt install -y --no-install-recommends git less
 
-
+# Copy service account credentials!
 COPY research-technologies-testbed-a786f12c5112.json /svc.json
 
 RUN gcloud config configurations create testbed-config \
@@ -71,8 +67,6 @@ RUN gcloud config configurations create testbed-config \
 
 RUN git clone https://github.com/jupyterhub/kubespawner.git
 RUN cd kubespawner && python setup.py install
-
-#ENV HUB_CONNECT_IP 
 
 # Google Container Registry:
 # > docker tag dstndstn/cyol gcr.io/research-technologies-testbed/cyol
@@ -101,42 +95,86 @@ RUN cd kubespawner && python setup.py install
 # your-first-cluster-1-to-all-vms-on-network  default  INGRESS    1000      tcp,udp,icmp,esp,ah,sctp        False
 
 
-# Master KDC
-RUN DEBIAN_FRONTEND=noninteractive \
-    apt install -y --no-install-recommends krb5-kdc krb5-admin-server iputils-ping libpam-krb5
-COPY krb5.conf kdc.conf /etc/
-
 # hub.c.research-technologies-testbed.internal
 
-COPY krb5-passwd /tmp
-#RUN cat /tmp/krb5-passwd /tmp/krb5-passwd | kdb5_util create -r HUB.LOCAL -s
+RUN DEBIAN_FRONTEND=noninteractive \
+    apt install -y --no-install-recommends nfs-server iputils-ping emacs-nox
 
-# https://web.mit.edu/kerberos/krb5-latest/doc/admin/install_kdc.html#add-administrators-to-the-acl-file
-# https://help.ubuntu.com/community/Kerberos
-COPY krb5-acl /etc/krb5kdc/kadm5.acl
 
-RUN cat /tmp/krb5-passwd /tmp/krb5-passwd | krb5_newrealm
 
-COPY kadmin.script /tmp
-RUN cat /tmp/kadmin.script | kadmin.local && rm /tmp/kadmin.script
+#COPY slappasswd /tmp
+#slappasswd -g > /tmp/slappasswd && \
+#slappasswd -s $(cat /tmp/slappasswd) > /tmp/hashpass && \
+#RUN sed -i 's/nodomain/hub/g' /etc/ldap/slapd.d/cn=config/olcDatabase={1}mdb.ldif
 
-RUN apt install -y --no-install-recommends nfs-server
+RUN echo "BASE dc=hub\nURI ldap://hub\n" >> /etc/ldap/ldap.conf
 
-# Trying to NFS export /home doesn't work (it's an overlay filesystem)
-# Try exporting a separate mounted persistent disk.
+RUN git config --global user.email x && \
+    git config --global user.name x
 
-# GCP persistent disk: must format & mount first.
-# (have to do this on a non-COS VM, and have to delete other VMs so that
-#  they are not attached to the disk -- annoying!!!)
-# lsblk
-# mkfs.ext4 -m 0 -F -E lazy_itable_init=0,lazy_journal_init=0,discard /dev/sdb
+ARG LDAP_PW=XXX333
 
-# When starting containerized VM, have to BOTH attach the existing
-# disk in the host, and also mount it into the container.
+RUN DEBIAN_FRONTEND=noninteractive apt install -y --no-install-recommends \
+    debconf-utils
 
-# Host:
-#dlang@hub ~ $ mount | grep sdb
-#/dev/sdb on /mnt/disks/gce-containers-mounts/gce-persistent-disks/nfs-home type ext4 (rw,relatime)
+
+### Do we need ldapscripts??
+
+
+
+
+
+
+#    echo "slapd slapd/password1 password ${LDAP_PW}" | debconf-set-selections && \
+#    echo "slapd slapd/password2 password ${LDAP_PW}" | debconf-set-selections && \
+
+# ENV DEBIAN_FRONTEND=noninteractive
+# RUN echo "slapd slapd/domain string hub" | debconf-set-selections && \
+#     echo "slapd slapd/purge_database boolean true" | debconf-set-selections && \
+#     echo "slapd slapd/move_old_database boolean true" | debconf-set-selections && \
+#     echo "slapd shared/organization string PI" | debconf-set-selections && \
+#     echo "slapd slapd/allow_ldap_v2 boolean false" | debconf-set-selections && \
+#     echo "slapd slapd/no_configuration boolean false" | debconf-set-selections && \
+#     echo "slapd slapd/backend string MDB" | debconf-set-selections && \
+#     echo "slapd slapd/password1 password XXX333" | debconf-set-selections && \
+#     echo "slapd slapd/password2 password XXX333" | debconf-set-selections && \
+
+
+RUN DEBIAN_FRONTEND=noninteractive   apt install -y --no-install-recommends \
+        slapd ldap-utils ldapscripts libnss-ldap
+
+COPY nsswitch.conf /etc
+# required for 'getent passwd'
+COPY etcldap.conf /etc/ldap.conf
+
+
+
+
+
+
+
+
+#&& \
+#    dpkg-reconfigure slapd
+
+
+#COPY slap.db /etc/ldap/slapd.d/cn=config/olcDatabase={1}mdb.ldif
+
+# ldapsearch -b 'dc=hub' -s base '(objectclass=*)'
+# ldapsearch -Q -LLL -Y EXTERNAL -H ldapi:/// -b cn=config dn
+# ldapsearch -x -LLL -H ldap:/// -b dc=hub dn
+
+### docker run --hostname hub -it dstndstn/cyol bash
+
+#slappasswd -g > /tmp/slappasswd && \
+#slappasswd -s $(cat /tmp/slappasswd) > /tmp/hashpass && \
+#sed -i "s/olcRootPW.*/olcRootPW: $(cat /tmp/hashpass)/" /etc/ldap/slapd.d/cn=config/olcDatabase={1}mdb.ldif
+#sed -i "s/olcRootPW: .*/olcRootPW: $(cat /tmp/hashpass)/" /etc/ldap/slapd.d/cn=config/olcDatabase={1}mdb.ldif
+
+COPY add_content.ldif /tmp
+
+#echo -e "dn: olcDatabase={1}mdb,cn=config\nchangetype: modify\nadd: olcRootPW\nolcRootPW: $(cat /tmp/hashpass)\n" |
+# ldapmodify -Q -Y EXTERNAL -H ldapi:///
 
 # kubectl apply -f ../config/nfs-pv.yaml
 # kubectl apply -f ../config/nfs-pvc.yaml
@@ -153,8 +191,7 @@ RUN apt install -y --no-install-recommends nfs-server
 
 # https://medium.com/platformer-blog/nfs-persistent-volumes-with-kubernetes-a-case-study-ce1ed6e2c266
 
-RUN apt install slapd ldap-utils ldapscripts libnss-ldap
-COPY libnss-ldap.conf /etc/
+#COPY libnss-ldap.conf /etc/
 
 # ldapadd -x -D cn=admin,dc=hub -W -f /tmp/add_content.ldif
 
@@ -170,18 +207,22 @@ COPY libnss-ldap.conf /etc/
 # cn: Test Guy
 # gidNumber: 5000
 
+# ldapsearch -x
+
 # https://help.ubuntu.com/lts/serverguide/openldap-server.html
-#  apt install libnss-ldap
+#  apt install 
 #  apt install ldap-auth-config
 #  dpkg-reconfigure ldap-auth-config
 #  python2 /usr/sbin/auth-client-config -t nss -p lac_ldap
-
+#  pam-auth-update
+#  edit /etc/ldapscripts/ldapscripts.conf
 
 # /usr/share/doc/libpam-krb5/README.Debian.gz
 # https://wiki.debian.org/LDAP/Kerberos#PAM
 
 
-ADD slapd-conf.tgz /etc/ldap/
+#ADD slapd-conf.tgz /etc/ldap/
+
 COPY startup.sh /
 CMD bash startup.sh
 COPY inituser.sh /
