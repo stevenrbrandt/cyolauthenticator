@@ -77,11 +77,16 @@ def mkuser(user, passw, passw2, code_check):
       e.my_message = "Illegal character in password. Only letters, numbers and the underscore are allowed."
       raise e
 
-    home = "/home/%s" % user
-    cmd = ["useradd",user,"-s","/bin/bash"]
+    homebase = '/nfs/home'
+    homedir = os.path.join(homebase, user)
+
+    create_uid = None
+    create_homedir = False
+    
+    #cmd = ['useradd',user,"-s","/bin/bash",'-b',homebase'-g','users']
     check_pass2 = False
-    if os.path.exists(home):
-      uid = stat(home).st_uid
+    if os.path.exists(homedir):
+      uid = stat(homedir).st_uid
       try:
         pwd.getpwuid(uid)
         return authuser(user, passw)
@@ -89,7 +94,8 @@ def mkuser(user, passw, passw2, code_check):
         #return uid
       except KeyError:
         check_pass2 = True
-      cmd += ["-u",str(uid)]
+      create_uid = str(uid)
+      #cmd += ["-u",str(uid)]
     else:
 
       if not os.path.exists("/usr/enable_mkuser"):
@@ -105,19 +111,21 @@ def mkuser(user, passw, passw2, code_check):
         e = HTTPError(403)
         e.my_message = "Password and Password2 do not match."
         raise e
-      cmd += ["-m"]
+      create_homedir = True
+      #cmd += ["-m"]
       uids = set()
-      for path in os.listdir("/home"):
-        u = stat("/home/%s" % path).st_uid
+      for path in os.listdir(homebase):
+        u = stat(os.path.join(homebase, path)).st_uid
         uids.add(u)
-      for u in range(1000,100000):
+      for u in range(10000,100000):
         if u in uids:
           continue
         try:
           pwd.getpwuid(u)
         except KeyError:
           uid = u
-          cmd += ["-u",str(uid)]
+          #cmd += ["-u",str(uid)]
+          create_uid = str(uid)
           break
 
     if check_pass2:
@@ -125,14 +133,40 @@ def mkuser(user, passw, passw2, code_check):
         e = HTTPError(403)
         e.my_message = "Password and Password2 do not match."
         raise e
-    call(cmd)
-    call(["su","-",user,"-c","bash /inituser.sh"])
 
-    pipe = Popen(["chpasswd"],stdin=PIPE,universal_newlines=True)
-    pipe.stdin.write("%s:%s\n" % (user, passw))
+    # cmd = ['useradd',user,"-s","/bin/bash",'-b',homebase'-g','users']
+    # if create_homedir is not None:
+    #   cmd += ['-m']
+    # if create_uid is not None:
+    #   cmd += ['-u',create_uid]
+    #call(cmd)
+
+    cmd = ['ldapadduser', user, 'users']
+    if create_uid is not None:
+      cmd += [create_uid]
+    call(cmd)
+    if create_homedir:
+      cmd = ['mkdir', homedir]
+      call(cmd)
+      cmd = ['chown','%s:users' % user, homedir]
+      call(cmd)
+      pipe = Popen(['ldapmodifyuser',user], stdin=PIPE, universal_newlines=True)
+      pipe.stdin.write('replace: homeDirectory\nhomeDirectory: %s\n' % homedir)
+      pipe.stdin.close()
+      pipe.wait()
+
+    pipe = Popen(['ldapsetpasswd', user], stdin=PIPE, universal_newlines=True)
+    pipe.stdin.write('%s\n%s\n' % (passw, passw))
     pipe.stdin.close()
     pipe.wait()
-    print("Chpasswd called with %s:%s" % (user, passw))
+      
+    call(["su","-",user,"-c","bash /inituser.sh"])
+
+    # pipe = Popen(["chpasswd"],stdin=PIPE,universal_newlines=True)
+    # pipe.stdin.write("%s:%s\n" % (user, passw))
+    # pipe.stdin.close()
+    # pipe.wait()
+    # print("Chpasswd called with %s:%s" % (user, passw))
     return True
 
 class CYOLAuthenticator(Authenticator):

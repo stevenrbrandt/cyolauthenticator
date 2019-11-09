@@ -9,6 +9,8 @@ c.JupyterHub.hub_ip = '0.0.0.0'
 import kubespawner
 c.JupyterHub.spawner_class = 'kubespawner.KubeSpawner'
 c.KubeSpawner.debug = True
+c.KubeSpawner.start_timeout = 90
+#c.KubeSpawner.http_timeout = 90
 
 c.KubeSpawner.profile_list = [
     {

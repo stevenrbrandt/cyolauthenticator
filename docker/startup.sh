@@ -5,11 +5,36 @@ cd /
 #kadmind
 
 
-slappasswd -g > /tmp/slappasswd
-slappasswd -s $(cat /tmp/slappasswd) > /tmp/hashpass
+#slappasswd -s $(cat /tmp/slappasswd) > /tmp/hashpass
 #echo -e "dn: olcDatabase={1}mdb,cn=config\nchangetype: modify\nadd: olcRootPW\nolcRootPW: $(cat /tmp/hashpass)\n" | ldapmodify -Q -Y EXTERNAL -H ldapi:///
-echo -e "dn: olcDatabase={1}mdb,cn=config\nreplace: olcRootPW\nolcRootPW: $(cat /tmp/hashpass)" | ldapmodify -Y EXTERNAL -H ldapi:///
+slappasswd -g > /tmp/slappasswd
+chmod 400 /tmp/slappasswd
+slappasswd -T /tmp/slappasswd > /tmp/hashpass
+
 service slapd start
+
+echo -e "dn: olcDatabase={1}mdb,cn=config\nchangetype: modify\nreplace: olcRootPW\nolcRootPW: $(cat /tmp/hashpass)" | ldapmodify -Y EXTERNAL -H ldapi:///
+#echo -e "dn: olcDatabase={1}mdb,cn=config\nchangetype: modify\nreplace: olcRootDN\nolcRootDN: cn=admin,dc=hub" | ldapmodify -Y EXTERNAL -H ldapi:///
+
+#service slapd stop
+#service slapd start
+
+# ldapsearch -H ldapi:// -LLL -Q -Y EXTERNAL -b "cn=config" "(olcRootDN=*)" dn olcRootDN olcRootPW
+
+# ldapsearch -H ldapi:// -LLL -Q -Y EXTERNAL -b "dc=hub"
+
+# https://www.digitalocean.com/community/tutorials/how-to-change-account-passwords-on-an-openldap-server
+
+echo -e "dn: cn=admin,dc=hub\nchangetype: modify\nreplace: userPassword\nuserPassword: $(cat /tmp/hashpass)" | ldapmodify -H ldap:// -x -D "cn=admin,dc=hub" -y /tmp/slappasswd
+
+ldapadd -y /tmp/slappasswd -x -D cn=admin,dc=hub -f /tmp/add_content.ldif
+#ldapadd -y /tmp/slappasswd -x -D cn=admin,dc=hub -f /tmp/george.ldif
+
+cp /tmp/slappasswd /etc/ldapscripts/ldapscripts.passwd
+chmod 600 /etc/ldapscripts/ldapscripts.passwd
+ldapaddgroup users
+ldapadduser george users
+
 
 
 # # from https://github.com/GoogleCloudPlatform/nfs-server-docker/blob/master/1/debian9/1.3/docker-entrypoint.sh

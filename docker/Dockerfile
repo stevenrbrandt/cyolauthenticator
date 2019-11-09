@@ -30,11 +30,6 @@ COPY error.html /usr/local/share/jupyterhub/templates/error.html
 # Replace logo.png with whatever logo you wish to use to brand the server
 COPY pi-logo.png /usr/local/share/jupyterhub/static/images/logo.png
 
-RUN mkdir -p /usr/local/lib/python3.5/dist-packages/cyolauthenticator
-COPY __init__.py /usr/local/lib/python3.5/dist-packages/cyolauthenticator/__init__.py
-COPY cyolauthenticator.py /usr/local/lib/python3.5/dist-packages/cyolauthenticator/cyolauthenticator.py
-#RUN pip install cyolauthenticator
-
 # Install packages for the Jupyter notebooks!
 RUN pip install matplotlib numpy scipy scikit-learn astropy pandas fitsio pyephem asdf h5py emcee corner cython
 
@@ -120,43 +115,33 @@ RUN DEBIAN_FRONTEND=noninteractive apt install -y --no-install-recommends \
 
 ### Do we need ldapscripts??
 
-
-
-
-
-
 #    echo "slapd slapd/password1 password ${LDAP_PW}" | debconf-set-selections && \
 #    echo "slapd slapd/password2 password ${LDAP_PW}" | debconf-set-selections && \
 
-# ENV DEBIAN_FRONTEND=noninteractive
-# RUN echo "slapd slapd/domain string hub" | debconf-set-selections && \
-#     echo "slapd slapd/purge_database boolean true" | debconf-set-selections && \
-#     echo "slapd slapd/move_old_database boolean true" | debconf-set-selections && \
-#     echo "slapd shared/organization string PI" | debconf-set-selections && \
-#     echo "slapd slapd/allow_ldap_v2 boolean false" | debconf-set-selections && \
-#     echo "slapd slapd/no_configuration boolean false" | debconf-set-selections && \
-#     echo "slapd slapd/backend string MDB" | debconf-set-selections && \
-#     echo "slapd slapd/password1 password XXX333" | debconf-set-selections && \
-#     echo "slapd slapd/password2 password XXX333" | debconf-set-selections && \
-
-
-RUN DEBIAN_FRONTEND=noninteractive   apt install -y --no-install-recommends \
-        slapd ldap-utils ldapscripts libnss-ldap
+RUN echo "slapd slapd/domain string hub" | debconf-set-selections && \
+    echo "slapd slapd/purge_database boolean true" | debconf-set-selections && \
+    echo "slapd slapd/move_old_database boolean true" | debconf-set-selections && \
+    echo "slapd shared/organization string PI" | debconf-set-selections && \
+    echo "slapd slapd/allow_ldap_v2 boolean false" | debconf-set-selections && \
+    echo "slapd slapd/no_configuration boolean false" | debconf-set-selections && \
+    echo "slapd slapd/backend string MDB" | debconf-set-selections && \
+    echo "slapd slapd/password1 password XXX" | debconf-set-selections && \
+    echo "slapd slapd/password2 password XXX" | debconf-set-selections && \
+    DEBIAN_FRONTEND=noninteractive   apt install -y --no-install-recommends \
+        slapd ldap-utils ldapscripts libnss-ldap && \
+    DEBIAN_FRONTEND=noninteractive dpkg-reconfigure slapd
 
 COPY nsswitch.conf /etc
 # required for 'getent passwd'
 COPY etcldap.conf /etc/ldap.conf
+COPY ldapscripts.conf /etc/ldapscripts
 
+RUN echo "libpam-runtime  libpam-runtime/profiles multiselect     unix, ldap" | debconf-set-selections && \
+    DEBIAN_FRONTEND=noninteractive   apt install -y --no-install-recommends \
+        libpam-ldap && \
+    DEBIAN_FRONTEND=noninteractive dpkg-reconfigure libpam-runtime
 
-
-
-
-
-
-
-#&& \
-#    dpkg-reconfigure slapd
-
+# pam-auth-update
 
 #COPY slap.db /etc/ldap/slapd.d/cn=config/olcDatabase={1}mdb.ldif
 
@@ -172,6 +157,7 @@ COPY etcldap.conf /etc/ldap.conf
 #sed -i "s/olcRootPW: .*/olcRootPW: $(cat /tmp/hashpass)/" /etc/ldap/slapd.d/cn=config/olcDatabase={1}mdb.ldif
 
 COPY add_content.ldif /tmp
+COPY george.ldif /tmp
 
 #echo -e "dn: olcDatabase={1}mdb,cn=config\nchangetype: modify\nadd: olcRootPW\nolcRootPW: $(cat /tmp/hashpass)\n" |
 # ldapmodify -Q -Y EXTERNAL -H ldapi:///
@@ -207,7 +193,11 @@ COPY add_content.ldif /tmp
 # cn: Test Guy
 # gidNumber: 5000
 
+# ldapsearch -x -LLL -H ldap://hub -b dc=hub 'uid=george'
+
 # ldapsearch -x
+
+# !! lsldap
 
 # https://help.ubuntu.com/lts/serverguide/openldap-server.html
 #  apt install 
@@ -223,6 +213,11 @@ COPY add_content.ldif /tmp
 
 #ADD slapd-conf.tgz /etc/ldap/
 
+RUN mkdir -p /usr/local/lib/python3.5/dist-packages/cyolauthenticator
+COPY __init__.py /usr/local/lib/python3.5/dist-packages/cyolauthenticator/__init__.py
+COPY cyolauthenticator.py /usr/local/lib/python3.5/dist-packages/cyolauthenticator/cyolauthenticator.py
+#RUN pip install cyolauthenticator
+
 COPY startup.sh /
 CMD bash startup.sh
 COPY inituser.sh /
@@ -232,7 +227,21 @@ ENV GOOGLE_APPLICATION_CREDENTIALS /svc.json
 EXPOSE 80
 EXPOSE 8081
 
-RUN echo "/home 10.0.0.0/8(rw)" > /etc/exports
+#RUN echo "/home 10.0.0.0/8(rw)" > /etc/exports
+RUN echo "/nfs/home 10.0.0.0/8(rw)" > /etc/exports
 # per https://github.com/GoogleCloudPlatform/nfs-server-docker/blob/master/1/debian9/1.3/Dockerfile
 EXPOSE 2049/tcp
 EXPOSE 20048/tcp
+
+
+
+# gcloud beta compute --project=research-technologies-testbed instances create-with-container hub \
+#  --zone=us-central1-a --machine-type=n1-standard-1 --subnet=default --network-tier=PREMIUM \
+#  --metadata=google-logging-enabled=true --maintenance-policy=MIGRATE \
+#  --service-account=310980440256-compute@developer.gserviceaccount.com \
+#  --scopes=https://www.googleapis.com/auth/devstorage.read_only,https://www.googleapis.com/auth/logging.write,https://www.googleapis.com/auth/monitoring.write,https://www.googleapis.com/auth/servicecontrol,https://www.googleapis.com/auth/service.management.readonly,https://www.googleapis.com/auth/trace.append \
+#  --tags=hub,http-server --image=cos-stable-77-12371-114-0 --image-project=cos-cloud --boot-disk-size=10GB \
+#  --boot-disk-type=pd-standard --boot-disk-device-name=hub --disk=name=nfs-home,device-name=nfs-home,mode=rw,boot=no \
+#  --container-image=gcr.io/research-technologies-testbed/cyol --container-restart-policy=always --container-privileged \
+#  --container-mount-disk=mount-path=/nfs/home,name=nfs-home,mode=rw --labels=container-vm=cos-stable-77-12371-114-0 --reservation-affinity=any
+

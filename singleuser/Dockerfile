@@ -39,8 +39,18 @@ RUN pip install -v fitsio
 RUN pip install matplotlib numpy scipy scikit-learn astropy pandas fitsio pyephem asdf h5py emcee corner cython
 
 RUN apt install -y --no-install-recommends nfs-common rpcbind \
-    libpam-krb5
-COPY krb5.conf /etc/
+    libnss-ldap ldap-utils ldap-auth-config
+
+COPY nsswitch.conf /etc
+COPY etcldap.conf /etc/ldap.conf
+
+RUN echo "libpam-runtime  libpam-runtime/profiles multiselect     unix, ldap" | debconf-set-selections && \
+    DEBIAN_FRONTEND=noninteractive   apt install -y --no-install-recommends \
+        libpam-ldap && \
+    DEBIAN_FRONTEND=noninteractive dpkg-reconfigure libpam-runtime
+
+# libpam-krb5
+#COPY krb5.conf /etc/
 
 RUN echo "en_US.UTF-8 UTF-8" > /etc/locale.gen && \
     locale-gen
