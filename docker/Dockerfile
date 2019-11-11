@@ -226,6 +226,7 @@ COPY codeword.txt /usr/enable_mkuser
 ENV GOOGLE_APPLICATION_CREDENTIALS /svc.json
 EXPOSE 80
 EXPOSE 8081
+COPY jup-config-tst.py /jup-config-tst.py
 
 #RUN echo "/home 10.0.0.0/8(rw)" > /etc/exports
 RUN echo "/nfs/home 10.0.0.0/8(rw)" > /etc/exports
@@ -244,4 +245,16 @@ EXPOSE 20048/tcp
 #  --boot-disk-type=pd-standard --boot-disk-device-name=hub --disk=name=nfs-home,device-name=nfs-home,mode=rw,boot=no \
 #  --container-image=gcr.io/research-technologies-testbed/cyol --container-restart-policy=always --container-privileged \
 #  --container-mount-disk=mount-path=/nfs/home,name=nfs-home,mode=rw --labels=container-vm=cos-stable-77-12371-114-0 --reservation-affinity=any
+
+
+# Change persistent disk mount to /nfs (not /nfs/home), drop --reservation-affinity
+# gcloud beta compute --project=research-technologies-testbed instances create-with-container hub \
+#  --zone=us-central1-a --machine-type=n1-standard-1 --subnet=default --network-tier=PREMIUM \
+#  --metadata=google-logging-enabled=true --maintenance-policy=MIGRATE \
+#  --service-account=310980440256-compute@developer.gserviceaccount.com \
+#  --scopes=https://www.googleapis.com/auth/devstorage.read_only,https://www.googleapis.com/auth/logging.write,https://www.googleapis.com/auth/monitoring.write,https://www.googleapis.com/auth/servicecontrol,https://www.googleapis.com/auth/service.management.readonly,https://www.googleapis.com/auth/trace.append \
+#  --tags=hub,http-server --image=cos-stable-77-12371-114-0 --image-project=cos-cloud --boot-disk-size=10GB \
+#  --boot-disk-type=pd-standard --boot-disk-device-name=hub --disk=name=nfs-home,device-name=nfs-home,mode=rw,boot=no \
+#  --container-image=gcr.io/research-technologies-testbed/cyol --container-restart-policy=always --container-privileged \
+#  --container-mount-disk=mount-path=/nfs,name=nfs-home,mode=rw --labels=container-vm=cos-stable-77-12371-114-0
 

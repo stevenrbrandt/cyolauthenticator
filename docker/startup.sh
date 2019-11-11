@@ -10,32 +10,44 @@ cd /
 slappasswd -g > /tmp/slappasswd
 chmod 400 /tmp/slappasswd
 slappasswd -T /tmp/slappasswd > /tmp/hashpass
-
-service slapd start
-
-echo -e "dn: olcDatabase={1}mdb,cn=config\nchangetype: modify\nreplace: olcRootPW\nolcRootPW: $(cat /tmp/hashpass)" | ldapmodify -Y EXTERNAL -H ldapi:///
-#echo -e "dn: olcDatabase={1}mdb,cn=config\nchangetype: modify\nreplace: olcRootDN\nolcRootDN: cn=admin,dc=hub" | ldapmodify -Y EXTERNAL -H ldapi:///
-
-#service slapd stop
-#service slapd start
-
-# ldapsearch -H ldapi:// -LLL -Q -Y EXTERNAL -b "cn=config" "(olcRootDN=*)" dn olcRootDN olcRootPW
-
-# ldapsearch -H ldapi:// -LLL -Q -Y EXTERNAL -b "dc=hub"
-
-# https://www.digitalocean.com/community/tutorials/how-to-change-account-passwords-on-an-openldap-server
-
-echo -e "dn: cn=admin,dc=hub\nchangetype: modify\nreplace: userPassword\nuserPassword: $(cat /tmp/hashpass)" | ldapmodify -H ldap:// -x -D "cn=admin,dc=hub" -y /tmp/slappasswd
-
-ldapadd -y /tmp/slappasswd -x -D cn=admin,dc=hub -f /tmp/add_content.ldif
-#ldapadd -y /tmp/slappasswd -x -D cn=admin,dc=hub -f /tmp/george.ldif
-
+# for ldapscripts
 cp /tmp/slappasswd /etc/ldapscripts/ldapscripts.passwd
 chmod 600 /etc/ldapscripts/ldapscripts.passwd
-ldapaddgroup users
-ldapadduser george users
 
+echo "/nfs/sys:"
+find /nfs/sys
 
+if [ -f /nfs/sys/ldap/data.mdb ]; then
+    echo "/nfs/sys/ldap/data.mdb exists -- symlinking!"
+    mv /var/lib/ldap /var/lib/ldap.orig
+    ln -s /nfs/sys/ldap /var/lib/
+
+    ls -l /var/lib/ldap
+
+    service slapd start
+
+    echo -e "dn: olcDatabase={1}mdb,cn=config\nchangetype: modify\nreplace: olcRootPW\nolcRootPW: $(cat /tmp/hashpass)" | ldapmodify -Y EXTERNAL -H ldapi:///
+    echo -e "dn: cn=admin,dc=hub\nchangetype: modify\nreplace: userPassword\nuserPassword: $(cat /tmp/hashpass)" | ldapmodify -H ldap:// -x -D "cn=admin,dc=hub" -y /tmp/slappasswd
+
+else
+    service slapd start
+
+    echo -e "dn: olcDatabase={1}mdb,cn=config\nchangetype: modify\nreplace: olcRootPW\nolcRootPW: $(cat /tmp/hashpass)" | ldapmodify -Y EXTERNAL -H ldapi:///
+    #echo -e "dn: olcDatabase={1}mdb,cn=config\nchangetype: modify\nreplace: olcRootDN\nolcRootDN: cn=admin,dc=hub" | ldapmodify -Y EXTERNAL -H ldapi:///
+    #service slapd stop
+    #service slapd start
+    # ldapsearch -H ldapi:// -LLL -Q -Y EXTERNAL -b "cn=config" "(olcRootDN=*)" dn olcRootDN olcRootPW
+    # ldapsearch -H ldapi:// -LLL -Q -Y EXTERNAL -b "dc=hub"
+
+    # https://www.digitalocean.com/community/tutorials/how-to-change-account-passwords-on-an-openldap-server
+    echo -e "dn: cn=admin,dc=hub\nchangetype: modify\nreplace: userPassword\nuserPassword: $(cat /tmp/hashpass)" | ldapmodify -H ldap:// -x -D "cn=admin,dc=hub" -y /tmp/slappasswd
+
+    ldapadd -y /tmp/slappasswd -x -D cn=admin,dc=hub -f /tmp/add_content.ldif
+    #ldapadd -y /tmp/slappasswd -x -D cn=admin,dc=hub -f /tmp/george.ldif
+
+    ldapaddgroup users
+    ldapadduser george users
+fi
 
 # # from https://github.com/GoogleCloudPlatform/nfs-server-docker/blob/master/1/debian9/1.3/docker-entrypoint.sh
 # rpcbind -w

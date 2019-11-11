@@ -5,6 +5,10 @@ c.JupyterHub.template_paths = ['/jinja/templates']
 
 # eg from https://github.com/GoogleCloudPlatform/gke-jupyter-classroom/blob/master/jupyterhub/jupyterhub_config.py
 c.JupyterHub.hub_ip = '0.0.0.0'
+c.JupyterHub.hub_port = 9001
+
+c.ConfigurableHTTPProxy.pid_file = '/proxy-tst.pid'
+c.ConfigurableHTTPProxy.api_url = 'http://0.0.0.0:5432'
 
 import kubespawner
 c.JupyterHub.spawner_class = 'kubespawner.KubeSpawner'

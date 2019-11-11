@@ -4,9 +4,16 @@
 
 set -e
 
-#mount -t nfs hub:/home /home
+echo "start-notebook.sh: $@"
+echo "I am: $(whoami)"
 
-ls /home
+echo "pwd: $(pwd)"
+cd
+echo "after cd: pwd: $(pwd)"
+
+echo "restartable: $RESTARTABLE"
+echo "api token: $JUPYTERHUB_API_TOKEN"
+echo "lab: $JUPYTER_ENABLE_LAB"
 
 wrapper=""
 if [[ "${RESTARTABLE}" == "yes" ]]; then
@@ -21,5 +28,5 @@ elif [[ ! -z "${JUPYTER_ENABLE_LAB}" ]]; then
   $wrapper jupyter lab "$@"
 else
   #. /usr/local/bin/start.sh $wrapper jupyter notebook "$@"
-  $wrapper jupyter notebook "$@"
+  $wrapper jupyter notebook --allow-root "$@"
 fi
