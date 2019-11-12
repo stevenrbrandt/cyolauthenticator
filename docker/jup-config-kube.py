@@ -12,14 +12,29 @@ c.KubeSpawner.debug = True
 c.KubeSpawner.start_timeout = 300
 #c.KubeSpawner.http_timeout = 90
 
+import pwd
 def get_kube_uid(spawner):
     print('Hello, I am get_kube_uid() with spawner', spawner)
     print('spawner.user is', spawner.user)
     print('spawner.user.name is', spawner.user.name)
     print('spawner.user.id is', spawner.user.id)
-    return spawner.user.id
+    uid = pwd.getpwnam(spawner.user.name).pw_uid
+    print('pwd uid:', uid)
+    return uid
+
+def get_kube_gid(spawner):
+    return pwd.getpwnam(spawner.user.name).pw_gid
 
 c.KubeSpawner.uid = get_kube_uid
+c.KubeSpawner.gid = get_kube_gid
+
+c.KubeSpawner.image_pull_policy = 'Always'
+c.KubeSpawner.volumes = [
+    dict(name='nfs2', persistentVolumeClaim=dict(claimName='nfs2')),
+]
+c.KubeSpawner.volume_mounts = [
+    dict(name='nfs2', mountPath='/nfs/home'),
+]
 
 # c.KubeSpawner.uid = int, callable -- user to run container as.
 #     callable: takes KubeSpawner, returns int.

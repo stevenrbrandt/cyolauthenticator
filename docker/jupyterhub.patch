@@ -1,0 +1,20 @@
+diff --git a/jupyterhub/apihandlers/users.py b/jupyterhub/apihandlers/users.py
+index 7231ea2d..e9f6c805 100644
+--- a/jupyterhub/apihandlers/users.py
++++ b/jupyterhub/apihandlers/users.py
+@@ -505,8 +505,14 @@ class SpawnProgressAPIHandler(APIHandler):
+         return 'text/event-stream'
+ 
+     async def send_event(self, event):
++        jevent = event.copy()
+         try:
+-            self.write('data: {}\n\n'.format(json.dumps(event)))
++            json.dumps(jevent)
++        except:
++            ### Error JSONifying!  try deleting problematic key
++            del jevent['raw_event']
++        try:
++            self.write('data: {}\n\n'.format(json.dumps(jevent)))
+             await self.flush()
+         except StreamClosedError:
+             self.log.warning("Stream closed while handling %s", self.request.uri)

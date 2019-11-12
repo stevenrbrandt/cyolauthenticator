@@ -10,10 +10,13 @@ import stat
 c = get_config()
 c.NotebookApp.ip = '0.0.0.0'
 c.NotebookApp.port = 8888
-c.NotebookApp.open_browser = False
+#c.NotebookApp.open_browser = False
 
 # https://github.com/jupyter/notebook/issues/3130
 c.FileContentsManager.delete_to_trash = False
+
+# https://stackoverflow.com/questions/55245895/jupyter-notebook-ssh-tunneling-error-the-signatures-database-cannot-be-opened
+c.NotebookNotary.db_file = ':memory:'
 
 # Generate a self-signed certificate
 if 'GEN_CERT' in os.environ:

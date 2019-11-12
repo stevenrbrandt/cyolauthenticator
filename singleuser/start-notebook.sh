@@ -4,9 +4,14 @@
 
 set -e
 
+set
+
+export HOME=/nfs/home/$(whoami)
+
 echo "start-notebook.sh: $@"
 echo "I am: $(whoami)"
-
+#ls /nfs
+#ls /nfs/home
 echo "pwd: $(pwd)"
 cd
 echo "after cd: pwd: $(pwd)"
@@ -14,6 +19,9 @@ echo "after cd: pwd: $(pwd)"
 echo "restartable: $RESTARTABLE"
 echo "api token: $JUPYTERHUB_API_TOKEN"
 echo "lab: $JUPYTER_ENABLE_LAB"
+
+mkdir -p /tmp/$(whoami)/jupyter-runtime
+export JUPYTER_RUNTIME_DIR=/tmp/$(whoami)/jupyter-runtime
 
 wrapper=""
 if [[ "${RESTARTABLE}" == "yes" ]]; then

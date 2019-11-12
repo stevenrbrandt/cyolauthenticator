@@ -37,9 +37,6 @@ RUN apt install wget
 RUN wget -nv https://julialang-s3.julialang.org/bin/linux/x64/1.2/julia-1.2.0-linux-x86_64.tar.gz
 RUN tar xvz -C /usr/local --strip-components 1 -f julia-1.2.0-linux-x86_64.tar.gz
 
-# docker run -it -p 8802:80 cyol
-
-
 ### Dustin -- try adding gcloud for launching notebook servers in gcloud kubernetes!
 
 RUN echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
@@ -53,13 +50,6 @@ RUN apt install -y --no-install-recommends git less
 # Copy service account credentials!
 COPY research-technologies-testbed-a786f12c5112.json /svc.json
 
-RUN gcloud config configurations create testbed-config \
-    && gcloud config configurations activate testbed-config \
-    && gcloud auth activate-service-account --key-file /svc.json \
-    && gcloud container clusters get-credentials your-first-cluster-1 --zone us-central1-a --project research-technologies-testbed
-#    && rm /svc.json \
-#    && gcloud config set project research-technologies-testbed \
-
 RUN git clone https://github.com/jupyterhub/kubespawner.git
 RUN cd kubespawner && python setup.py install
 
@@ -71,9 +61,6 @@ RUN cd kubespawner && python setup.py install
 # gcloud container clusters get-credentials your-first-cluster-1 --zone us-central1-a --project research-technologies-testbed
 # kubectl logs jupyterhub-cyol-6b6f84b5f6-6mp2h
 
-# Runs container:
-# jupyterhub/singleuser:latest
-
 # kubectl cluster-info
 # kubectl get nodes
 # kubectl run hello-server --image gcr.io/google-samples/hello-app:1.0 --port 8080
@@ -84,40 +71,29 @@ RUN cd kubespawner && python setup.py install
 # $ gcloud container clusters describe your-first-cluster-1 --format=get"(clusterIpv4Cidr)" --zone us-central1-a
 # 10.4.0.0/14
 # $ gcloud compute firewall-rules create "your-first-cluster-1-to-all-vms-on-network" --network="default" --source-ranges="10.4.0.0/14" --allow=tcp,udp,icmp,esp,ah,sctp
-# Creating firewall...⠧Created [https://www.googleapis.com/compute/v1/projects/research-technologies-testbed/global/firewalls/your-first-cluster-1-to-all-vms-on-network].
-# Creating firewall...done.
+# Creating firewall...
+# Created [https://www.googleapis.com/compute/v1/projects/research-technologies-testbed/global/firewalls/your-first-cluster-1-to-all-vms-on-network].
 # NAME                                        NETWORK  DIRECTION  PRIORITY  ALLOW                     DENY  DISABLED
 # your-first-cluster-1-to-all-vms-on-network  default  INGRESS    1000      tcp,udp,icmp,esp,ah,sctp        False
-
 
 # hub.c.research-technologies-testbed.internal
 
 RUN DEBIAN_FRONTEND=noninteractive \
-    apt install -y --no-install-recommends nfs-server iputils-ping emacs-nox
+    apt install -y --no-install-recommends nfs-server iputils-ping emacs-nox \
+    debconf-utils
 
-
-
-#COPY slappasswd /tmp
-#slappasswd -g > /tmp/slappasswd && \
-#slappasswd -s $(cat /tmp/slappasswd) > /tmp/hashpass && \
-#RUN sed -i 's/nodomain/hub/g' /etc/ldap/slapd.d/cn=config/olcDatabase={1}mdb.ldif
-
-RUN echo "BASE dc=hub\nURI ldap://hub\n" >> /etc/ldap/ldap.conf
-
+# DEBUG
 RUN git config --global user.email x && \
     git config --global user.name x
 
-ARG LDAP_PW=XXX333
+RUN echo "BASE dc=hub\nURI ldap://hub\n" >> /etc/ldap/ldap.conf
+COPY nsswitch.conf /etc
+# required for 'getent passwd'
+COPY etcldap.conf /etc/ldap.conf
+COPY ldapscripts.conf /etc/ldapscripts
 
-RUN DEBIAN_FRONTEND=noninteractive apt install -y --no-install-recommends \
-    debconf-utils
 
-
-### Do we need ldapscripts??
-
-#    echo "slapd slapd/password1 password ${LDAP_PW}" | debconf-set-selections && \
-#    echo "slapd slapd/password2 password ${LDAP_PW}" | debconf-set-selections && \
-
+# Initialize LDAP server setup; we reset the password in startup.sh
 RUN echo "slapd slapd/domain string hub" | debconf-set-selections && \
     echo "slapd slapd/purge_database boolean true" | debconf-set-selections && \
     echo "slapd slapd/move_old_database boolean true" | debconf-set-selections && \
@@ -127,91 +103,33 @@ RUN echo "slapd slapd/domain string hub" | debconf-set-selections && \
     echo "slapd slapd/backend string MDB" | debconf-set-selections && \
     echo "slapd slapd/password1 password XXX" | debconf-set-selections && \
     echo "slapd slapd/password2 password XXX" | debconf-set-selections && \
+    echo "libpam-runtime  libpam-runtime/profiles multiselect     unix, ldap" | debconf-set-selections && \
     DEBIAN_FRONTEND=noninteractive   apt install -y --no-install-recommends \
-        slapd ldap-utils ldapscripts libnss-ldap && \
-    DEBIAN_FRONTEND=noninteractive dpkg-reconfigure slapd
-
-COPY nsswitch.conf /etc
-# required for 'getent passwd'
-COPY etcldap.conf /etc/ldap.conf
-COPY ldapscripts.conf /etc/ldapscripts
-
-RUN echo "libpam-runtime  libpam-runtime/profiles multiselect     unix, ldap" | debconf-set-selections && \
-    DEBIAN_FRONTEND=noninteractive   apt install -y --no-install-recommends \
-        libpam-ldap && \
-    DEBIAN_FRONTEND=noninteractive dpkg-reconfigure libpam-runtime
-
-# pam-auth-update
-
-#COPY slap.db /etc/ldap/slapd.d/cn=config/olcDatabase={1}mdb.ldif
-
-# ldapsearch -b 'dc=hub' -s base '(objectclass=*)'
-# ldapsearch -Q -LLL -Y EXTERNAL -H ldapi:/// -b cn=config dn
-# ldapsearch -x -LLL -H ldap:/// -b dc=hub dn
-
-### docker run --hostname hub -it dstndstn/cyol bash
-
-#slappasswd -g > /tmp/slappasswd && \
-#slappasswd -s $(cat /tmp/slappasswd) > /tmp/hashpass && \
-#sed -i "s/olcRootPW.*/olcRootPW: $(cat /tmp/hashpass)/" /etc/ldap/slapd.d/cn=config/olcDatabase={1}mdb.ldif
-#sed -i "s/olcRootPW: .*/olcRootPW: $(cat /tmp/hashpass)/" /etc/ldap/slapd.d/cn=config/olcDatabase={1}mdb.ldif
+        slapd ldap-utils ldapscripts libnss-ldap libpam-ldap && \
+    DEBIAN_FRONTEND=noninteractive dpkg-reconfigure slapd libpam-runtime
 
 COPY add_content.ldif /tmp
 COPY george.ldif /tmp
 
-#echo -e "dn: olcDatabase={1}mdb,cn=config\nchangetype: modify\nadd: olcRootPW\nolcRootPW: $(cat /tmp/hashpass)\n" |
-# ldapmodify -Q -Y EXTERNAL -H ldapi:///
+## If you create a new Kubernetes cluster, you must do:
 
 # kubectl apply -f ../config/nfs-pv.yaml
 # kubectl apply -f ../config/nfs-pvc.yaml
+# Ensure the "gcloud config" steps below re-run.
 
-# In workload -> deployment details, add to YAML under spec: containers:
+RUN gcloud config configurations create testbed-config \
+    && gcloud config configurations activate testbed-config \
+    && gcloud auth activate-service-account --key-file /svc.json \
+    && gcloud container clusters get-credentials your-first-cluster-1 --zone us-central1-a --project research-technologies-testbed
+#    && rm /svc.json \
+#    && gcloud config set project research-technologies-testbed \
 
-#        volumeMounts:
-#        - name: my-pvc-nfs
-#          mountPath: "/home"
-#      volumes:
-#      - name: my-pvc-nfs
-#        persistentVolumeClaim:
-#          claimName: nfs
 
 # https://medium.com/platformer-blog/nfs-persistent-volumes-with-kubernetes-a-case-study-ce1ed6e2c266
-
-#COPY libnss-ldap.conf /etc/
-
-# ldapadd -x -D cn=admin,dc=hub -W -f /tmp/add_content.ldif
-
-# Test:
-# # ldapsearch -x -LLL -b dc=hub 'uid=test' cn gidNumber
-#dn: uid=test,ou=People,dc=hub
-#cn: Test Guy
-#gidNumber: 5000
-
-# On instance-1:
-# # ldapsearch -x -LLL -H ldap://hub -b dc=hub 'uid=test' cn gidNumber
-# dn: uid=test,ou=People,dc=hub
-# cn: Test Guy
-# gidNumber: 5000
-
-# ldapsearch -x -LLL -H ldap://hub -b dc=hub 'uid=george'
-
-# ldapsearch -x
-
-# !! lsldap
-
-# https://help.ubuntu.com/lts/serverguide/openldap-server.html
-#  apt install 
-#  apt install ldap-auth-config
-#  dpkg-reconfigure ldap-auth-config
-#  python2 /usr/sbin/auth-client-config -t nss -p lac_ldap
-#  pam-auth-update
-#  edit /etc/ldapscripts/ldapscripts.conf
-
 # /usr/share/doc/libpam-krb5/README.Debian.gz
 # https://wiki.debian.org/LDAP/Kerberos#PAM
 
-
-#ADD slapd-conf.tgz /etc/ldap/
+RUN pip install --upgrade notebook==6.0.2
 
 RUN mkdir -p /usr/local/lib/python3.5/dist-packages/cyolauthenticator
 COPY __init__.py /usr/local/lib/python3.5/dist-packages/cyolauthenticator/__init__.py
@@ -228,24 +146,14 @@ EXPOSE 80
 EXPOSE 8081
 COPY jup-config-tst.py /jup-config-tst.py
 
-#RUN echo "/home 10.0.0.0/8(rw)" > /etc/exports
+## Error JSONifying event causes spawn to fail
+COPY jupyterhub.patch /
+RUN cat jupyterhub.patch | (cd /usr/local/lib/python3.5/dist-packages && patch -p 1)
+
 RUN echo "/nfs/home 10.0.0.0/8(rw)" > /etc/exports
 # per https://github.com/GoogleCloudPlatform/nfs-server-docker/blob/master/1/debian9/1.3/Dockerfile
 EXPOSE 2049/tcp
 EXPOSE 20048/tcp
-
-
-
-# gcloud beta compute --project=research-technologies-testbed instances create-with-container hub \
-#  --zone=us-central1-a --machine-type=n1-standard-1 --subnet=default --network-tier=PREMIUM \
-#  --metadata=google-logging-enabled=true --maintenance-policy=MIGRATE \
-#  --service-account=310980440256-compute@developer.gserviceaccount.com \
-#  --scopes=https://www.googleapis.com/auth/devstorage.read_only,https://www.googleapis.com/auth/logging.write,https://www.googleapis.com/auth/monitoring.write,https://www.googleapis.com/auth/servicecontrol,https://www.googleapis.com/auth/service.management.readonly,https://www.googleapis.com/auth/trace.append \
-#  --tags=hub,http-server --image=cos-stable-77-12371-114-0 --image-project=cos-cloud --boot-disk-size=10GB \
-#  --boot-disk-type=pd-standard --boot-disk-device-name=hub --disk=name=nfs-home,device-name=nfs-home,mode=rw,boot=no \
-#  --container-image=gcr.io/research-technologies-testbed/cyol --container-restart-policy=always --container-privileged \
-#  --container-mount-disk=mount-path=/nfs/home,name=nfs-home,mode=rw --labels=container-vm=cos-stable-77-12371-114-0 --reservation-affinity=any
-
 
 # Change persistent disk mount to /nfs (not /nfs/home), drop --reservation-affinity
 # gcloud beta compute --project=research-technologies-testbed instances create-with-container hub \

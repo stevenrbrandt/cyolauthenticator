@@ -1,0 +1,14 @@
+dn: ou=People,dc=hub
+objectClass: organizationalUnit
+ou: People
+
+dn: ou=Groups,dc=hub
+objectClass: organizationalUnit
+ou: Groups
+
+dn: cn=users,ou=Groups,dc=hub
+objectClass: posixGroup
+cn: users
+gidNumber: 10000
+description: Group account
+
