@@ -151,6 +151,7 @@ CMD bash startup.sh
 #  --scopes=https://www.googleapis.com/auth/devstorage.read_only,https://www.googleapis.com/auth/logging.write,https://www.googleapis.com/auth/monitoring.write,https://www.googleapis.com/auth/servicecontrol,https://www.googleapis.com/auth/service.management.readonly,https://www.googleapis.com/auth/trace.append \
 #  --tags=hub,http-server --image=cos-stable-77-12371-114-0 --image-project=cos-cloud --boot-disk-size=10GB \
 #  --boot-disk-type=pd-standard --boot-disk-device-name=hub --disk=name=nfs-home,device-name=nfs-home,mode=rw,boot=no \
-#  --container-image=gcr.io/research-technologies-testbed/cyol --container-restart-policy=always --container-privileged \
+#  --container-image=dstndstn/cyol --container-restart-policy=always --container-privileged \
 #  --container-mount-disk=mount-path=/nfs,name=nfs-home,mode=rw --labels=container-vm=cos-stable-77-12371-114-0
 
+#  --container-image=gcr.io/research-technologies-testbed/cyol
