@@ -1,7 +1,3 @@
-# OR https://github.com/jupyter/docker-stacks
-#FROM jupyter/base-notebook
-#RUN pip3 install --no-cache jupyterhub notebook
-
 FROM ubuntu:18.04
 
 RUN apt update && apt -yq dist-upgrade \
@@ -31,8 +27,8 @@ RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 1 && \
     update-alternatives --install /usr/bin/pip pip /usr/bin/pip3 1
 
 RUN pip install --no-cache-dir setuptools && \
-    oauthenticator==0.9.0 jupyter==1.0.0 python-oauth2==1.1.1 \
-    notebook==6.0.2 \
+    pip install --no-cache-dir oauthenticator==0.9.0 jupyter==1.0.0 \
+    python-oauth2==1.1.1 notebook==6.0.2 \
     matplotlib numpy scipy scikit-learn astropy pandas fitsio pyephem \
     asdf h5py emcee corner cython
 
@@ -45,7 +41,7 @@ RUN wget -nv https://julialang-s3.julialang.org/bin/linux/x64/1.2/julia-1.2.0-li
 COPY nsswitch.conf /etc
 COPY etcldap.conf /etc/ldap.conf
 
-RUN echo "libpam-runtime  libpam-runtime/profiles multiselect     unix, ldap" | debconf-set-selections && \
+RUN echo "libpam-runtime libpam-runtime/profiles multiselect unix, ldap" | debconf-set-selections && \
     DEBIAN_FRONTEND=noninteractive dpkg-reconfigure libpam-runtime
 
 RUN echo "en_US.UTF-8 UTF-8" > /etc/locale.gen && locale-gen
