@@ -43,10 +43,7 @@ else
     echo -e "dn: cn=admin,dc=hub\nchangetype: modify\nreplace: userPassword\nuserPassword: $(cat /tmp/hashpass)" | ldapmodify -H ldap:// -x -D "cn=admin,dc=hub" -y /tmp/slappasswd
 
     ldapadd -y /tmp/slappasswd -x -D cn=admin,dc=hub -f /tmp/add_content.ldif
-    #ldapadd -y /tmp/slappasswd -x -D cn=admin,dc=hub -f /tmp/george.ldif
-
     ldapaddgroup users
-    ldapadduser george users
 fi
 
 # # from https://github.com/GoogleCloudPlatform/nfs-server-docker/blob/master/1/debian9/1.3/docker-entrypoint.sh
