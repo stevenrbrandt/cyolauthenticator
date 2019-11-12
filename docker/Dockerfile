@@ -2,37 +2,42 @@
 # however, if one does that then a Singularity version
 # of the image will not run on clusters with older
 # linux kernels.
-FROM ubuntu:16.04
+#FROM ubuntu:16.04
+
+FROM ubuntu:18.04
 USER root
 
 RUN apt-get update && \
-# python3-pam is needed for authuser.py
   DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-  python3 python3-pip openssh-client libssl-dev npm \
+  python3 python3-pip openssh-client \
+  libssl1.0-dev nodejs-dev node-gyp npm \
   gnupg policycoreutils python3-pam imagemagick curl vim wget \
   apt-transport-https ca-certificates git less \
   nfs-server iputils-ping emacs-nox debconf-utils \
-  slapd ldap-utils ldapscripts libnss-ldap libpam-ldap
+  slapd ldap-utils ldapscripts libnss-ldap libpam-ldap patch \
+  && apt-get clean && rm -rf /var/lib/apt/lists/*
 
+  # python3-pam is needed for authuser.py
+  # libssl-dev
 # Make python3 the default
-RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 1
-RUN update-alternatives --install /usr/bin/pip pip /usr/bin/pip3 1
+RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 1 && \
+    update-alternatives --install /usr/bin/pip pip /usr/bin/pip3 1
 
-RUN pip install --no-cache-dir --upgrade pip==19.0.3
-
-RUN pip install --no-cache-dir \
+#RUN #pip install --no-cache-dir --upgrade pip==19.0.3 && \
+RUN pip install --no-cache-dir setuptools && \
+    pip install --no-cache-dir \
     oauthenticator==0.9.0 jupyter==1.0.0 jupyterhub==1.0.0 \
     tornado==5.1.1 python-oauth2==1.1.1 \
     jupyterhub-dummyauthenticator notebook==6.0.2 \
     kubernetes==9.0.1
 
-RUN curl -sL https://deb.nodesource.com/setup_8.x | bash -
-RUN apt-get -y install nodejs 
-
+#RUN curl -sL https://deb.nodesource.com/setup_8.x | bash - && \
+#    apt-get -y install nodejs && \
 RUN npm install -g configurable-http-proxy
 
-RUN git clone https://github.com/jupyterhub/kubespawner.git
-RUN cd kubespawner && python setup.py install
+RUN git clone https://github.com/jupyterhub/kubespawner.git && \
+    cd kubespawner && \
+    python setup.py install
 
 # Install packages for the Jupyter notebooks!
 # RUN pip install --no-cache-dir matplotlib numpy scipy scikit-learn astropy pandas fitsio pyephem asdf h5py emcee corner cython
@@ -42,11 +47,8 @@ RUN cd kubespawner && python setup.py install
 
 # Add gcloud for launching notebook servers in Kubernetes
 RUN echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | tee -a /etc/apt/sources.list.d/google-cloud-sdk.list && \
-    curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key --keyring /usr/share/keyrings/cloud.google.gpg add - &&
+    curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key --keyring /usr/share/keyrings/cloud.google.gpg add - && \
     apt update && apt install -y google-cloud-sdk kubectl
-
-# Copy service account credentials!
-COPY research-technologies-testbed-a786f12c5112.json /svc.json
 
 # Google Container Registry:
 # > docker tag dstndstn/cyol gcr.io/research-technologies-testbed/cyol
@@ -93,9 +95,12 @@ RUN echo "slapd slapd/domain string hub" | debconf-set-selections && \
 
 RUN gcloud config configurations create testbed-config \
     && gcloud config configurations activate testbed-config \
-    && gcloud auth activate-service-account --key-file /svc.json \
-    && gcloud container clusters get-credentials your-first-cluster-1 --zone us-central1-a --project research-technologies-testbed \
     && gcloud config set project research-technologies-testbed
+
+# Copy service account credentials!
+#COPY research-technologies-testbed-a786f12c5112.json /svc.json
+#&& gcloud auth activate-service-account --key-file /svc.json \
+#&& gcloud container clusters get-credentials your-first-cluster-1 --zone us-central1-a --project research-technologies-testbed \
 
 # https://medium.com/platformer-blog/nfs-persistent-volumes-with-kubernetes-a-case-study-ce1ed6e2c266
 # /usr/share/doc/libpam-krb5/README.Debian.gz
@@ -109,9 +114,9 @@ COPY etcldap.conf /etc/ldap.conf
 COPY ldapscripts.conf /etc/ldapscripts
 COPY add_content.ldif /tmp
 
-RUN mkdir -p /usr/local/lib/python3.5/dist-packages/cyolauthenticator
-COPY __init__.py /usr/local/lib/python3.5/dist-packages/cyolauthenticator/__init__.py
-COPY cyolauthenticator.py /usr/local/lib/python3.5/dist-packages/cyolauthenticator/cyolauthenticator.py
+RUN mkdir -p /usr/local/lib/python3.6/dist-packages/cyolauthenticator
+COPY __init__.py /usr/local/lib/python3.6/dist-packages/cyolauthenticator/__init__.py
+COPY cyolauthenticator.py /usr/local/lib/python3.6/dist-packages/cyolauthenticator/cyolauthenticator.py
 #RUN pip install cyolauthenticator
 
 # Edit the message in the h1 tags to customize your tutorial
@@ -121,26 +126,24 @@ COPY login.html error.html /usr/local/share/jupyterhub/templates/
 # Replace logo.png with whatever logo you wish to use to brand the server
 COPY pi-logo.png /usr/local/share/jupyterhub/static/images/logo.png
 
-COPY startup.sh /
-CMD bash startup.sh
-COPY inituser.sh /
-COPY jup-config-kube.py /jup-config.py
+COPY startup.sh inituser.sh jup-config.py /
 COPY codeword.txt /usr/enable_mkuser
-ENV GOOGLE_APPLICATION_CREDENTIALS /svc.json
-EXPOSE 80
-EXPOSE 8081
-COPY jup-config-tst.py /jup-config-tst.py
+RUN echo "/nfs/home 10.0.0.0/8(rw)" > /etc/exports
+#COPY jup-config-tst.py /jup-config-tst.py
 
 ## Error JSONifying event causes spawn to fail
 COPY jupyterhub.patch /
-RUN cat jupyterhub.patch | (cd /usr/local/lib/python3.5/dist-packages && patch -p 1)
+RUN cat jupyterhub.patch | (cd /usr/local/lib/python3.6/dist-packages && patch -p 1)
 
-RUN echo "/nfs/home 10.0.0.0/8(rw)" > /etc/exports
+# This list of EXPOSEd ports is not complete (and not required when running in Google Compute Engine)
+EXPOSE 80
+EXPOSE 8081
 # per https://github.com/GoogleCloudPlatform/nfs-server-docker/blob/master/1/debian9/1.3/Dockerfile
 EXPOSE 2049/tcp
 EXPOSE 20048/tcp
+CMD bash startup.sh
+#ENV GOOGLE_APPLICATION_CREDENTIALS /svc.json
 
-# Change persistent disk mount to /nfs (not /nfs/home), drop --reservation-affinity
 # gcloud beta compute --project=research-technologies-testbed instances create-with-container hub \
 #  --zone=us-central1-a --machine-type=n1-standard-1 --subnet=default --network-tier=PREMIUM \
 #  --metadata=google-logging-enabled=true --maintenance-policy=MIGRATE \
