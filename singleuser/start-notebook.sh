@@ -4,18 +4,15 @@
 
 set -e
 
-set
-
-export HOME=/nfs/home/$(whoami)
-
-echo "start-notebook.sh: $@"
-echo "I am: $(whoami)"
+#set
+#export HOME=/nfs/home/$(whoami)
+#echo "start-notebook.sh: $@"
+#echo "I am: $(whoami)"
 #ls /nfs
 #ls /nfs/home
+#cd
+#echo "after cd: pwd: $(pwd)"
 echo "pwd: $(pwd)"
-cd
-echo "after cd: pwd: $(pwd)"
-
 echo "restartable: $RESTARTABLE"
 echo "api token: $JUPYTERHUB_API_TOKEN"
 echo "lab: $JUPYTER_ENABLE_LAB"

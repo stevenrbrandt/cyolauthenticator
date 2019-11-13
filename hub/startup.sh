@@ -2,6 +2,8 @@
 
 cd /
 
+service ssh start
+
 # Authorize to use kubernetes using service account,
 # assumed to be stored in /nfs/sys/svc.json
 gcloud auth activate-service-account --key-file /nfs/sys/svc.json
@@ -13,7 +15,7 @@ gcloud container clusters get-credentials --zone us-central1-a \
 slappasswd -g > /tmp/slappasswd
 chmod 400 /tmp/slappasswd
 slappasswd -T /tmp/slappasswd > /tmp/hashpass
-# for ldapscripts
+# Copy password for ldapscripts
 cp /tmp/slappasswd /etc/ldapscripts/ldapscripts.passwd
 chmod 600 /etc/ldapscripts/ldapscripts.passwd
 
@@ -41,6 +43,7 @@ rm /tmp/slappasswd
 mount -t nfsd nfds /proc/fs/nfsd
 
 service rpcbind start
+service nfs-common start
 service nfs-kernel-server start
 
 # If we have a certificate directory...
@@ -50,4 +53,4 @@ then
 else
   PORT=80
 fi
-jupyterhub --ip 0.0.0.0 --port $PORT -f jup-config.py
+jupyterhub --port $PORT -f jup-config.py | tee jupyterhub.log

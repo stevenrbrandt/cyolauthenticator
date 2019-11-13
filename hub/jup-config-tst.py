@@ -16,6 +16,7 @@ c.KubeSpawner.debug = True
 c.KubeSpawner.start_timeout = 300
 #c.KubeSpawner.http_timeout = 90
 
+import pwd
 def get_kube_uid(spawner):
     print('Hello, I am get_kube_uid() with spawner', spawner)
     print('spawner.user is', spawner.user)

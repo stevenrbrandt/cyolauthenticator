@@ -1,0 +1,81 @@
+# https://medium.com/platformer-blog/nfs-persistent-volumes-with-kubernetes-a-case-study-ce1ed6e2c266
+# /usr/share/doc/libpam-krb5/README.Debian.gz
+# https://wiki.debian.org/LDAP/Kerberos#PAM
+
+
+# Trying to NFS export /home (in the docker container) doesn't work
+# (it's an overlay filesystem) -- Try exporting a separate mounted
+# persistent disk.
+
+# GCP persistent disk: must format & mount first.
+# (have to do this on a non-COS VM, and have to delete other VMs so that
+#  they are not attached to the disk -- annoying!!!)
+# lsblk
+# mkfs.ext4 -m 0 -F -E lazy_itable_init=0,lazy_journal_init=0,discard /dev/sdb
+
+# When starting containerized VM, have to BOTH attach the existing
+# disk in the host, and also mount it into the container.
+
+# Host:
+#dlang@hub ~ $ mount | grep sdb
+#/dev/sdb on /mnt/disks/gce-containers-mounts/gce-persistent-disks/nfs-home type ext4 (rw,relatime)
+
+
+# Google Container Registry:
+# > docker tag dstndstn/cyol gcr.io/research-technologies-testbed/cyol
+# > docker push gcr.io/research-technologies-testbed/cyol
+
+# Getting logs from service running in GKE
+# gcloud container clusters get-credentials your-first-cluster-1 --zone us-central1-a --project research-technologies-testbed
+# kubectl logs jupyterhub-cyol-6b6f84b5f6-6mp2h
+
+# kubectl cluster-info
+# kubectl get nodes
+# kubectl run hello-server --image gcr.io/google-samples/hello-app:1.0 --port 8080
+
+# ldapadd -x -D cn=admin,dc=hub -W -f /tmp/add_content.ldif
+# Test:
+# # ldapsearch -x -LLL -b dc=hub 'uid=test' cn gidNumber
+#dn: uid=test,ou=People,dc=hub
+#cn: Test Guy
+#gidNumber: 5000
+
+# On instance-1:
+# # ldapsearch -x -LLL -H ldap://hub -b dc=hub 'uid=test' cn gidNumber
+# dn: uid=test,ou=People,dc=hub
+# cn: Test Guy
+# gidNumber: 5000
+
+# ldapsearch -x -LLL -H ldap://hub -b dc=hub 'uid=george'
+
+# ldapsearch -x
+
+# !! lsldap
+# ldapsearch -b 'dc=hub' -s base '(objectclass=*)'
+# ldapsearch -Q -LLL -Y EXTERNAL -H ldapi:/// -b cn=config dn
+# ldapsearch -x -LLL -H ldap:/// -b dc=hub dn
+
+# In workload -> deployment details, add to YAML under spec: containers:
+
+#        volumeMounts:
+#        - name: my-pvc-nfs
+#          mountPath: "/home"
+#      volumes:
+#      - name: my-pvc-nfs
+#        persistentVolumeClaim:
+#          claimName: nfs
+
+
+
+# PER https://cloud.google.com/kubernetes-engine/docs/troubleshooting#autofirewall
+# $ gcloud container clusters describe your-first-cluster-1 --format=get"(network)" --zone us-central1-a
+# default
+# $ gcloud container clusters describe your-first-cluster-1 --format=get"(clusterIpv4Cidr)" --zone us-central1-a
+# 10.4.0.0/14
+# $ gcloud compute firewall-rules create "your-first-cluster-1-to-all-vms-on-network" --network="default" --source-ranges="10.4.0.0/14" --allow=tcp,udp,icmp,esp,ah,sctp
+# Creating firewall...
+# Created [https://www.googleapis.com/compute/v1/projects/research-technologies-testbed/global/firewalls/your-first-cluster-1-to-all-vms-on-network].
+# NAME                                        NETWORK  DIRECTION  PRIORITY  ALLOW                     DENY  DISABLED
+# your-first-cluster-1-to-all-vms-on-network  default  INGRESS    1000      tcp,udp,icmp,esp,ah,sctp        False
+#
+# hub.c.research-technologies-testbed.internal
