@@ -106,11 +106,6 @@ RUN echo "/nfs/home 10.0.0.0/8(rw,async,no_subtree_check,root_squash)" > /etc/ex
 COPY jupyterhub.patch /
 RUN cat jupyterhub.patch | (cd /usr/local/lib/python3.6/dist-packages && patch -p 1)
 
-RUN apt install -y systemd
-COPY jupyterhub.service /etc/systemd/system
-COPY jupyterhub.sh /
-RUN chmod 755 /jupyterhub.sh
-
 # This list of EXPOSEd ports is not complete (and not required when running in Google Compute Engine)
 EXPOSE 80
 EXPOSE 8081
