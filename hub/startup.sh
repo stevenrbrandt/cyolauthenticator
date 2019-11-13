@@ -10,6 +10,7 @@ gcloud auth activate-service-account --key-file /nfs/sys/svc.json
 gcloud container clusters get-credentials --zone us-central1-a \
        --project research-technologies-testbed \
        your-first-cluster-1
+gcloud config set container/use_client_certificate True
 
 # Reset the LDAP passwords
 slappasswd -g > /tmp/slappasswd
@@ -42,15 +43,17 @@ rm /tmp/slappasswd
 # Need to run in a "privileged" container for this!!
 mount -t nfsd nfds /proc/fs/nfsd
 
+mkdir -p /run/sendsigs.omit.d/
 service rpcbind start
 service nfs-common start
 service nfs-kernel-server start
 
-# If we have a certificate directory...
-if [ -d /etc/pki/tls/certs/tutorial.cer ]
-then
-  PORT=443
-else
-  PORT=80
-fi
-jupyterhub --port $PORT -f jup-config.py | tee jupyterhub.log
+for ((;;)); do
+  # If we have a certificate directory...
+  if [ -d /etc/pki/tls/certs/tutorial.cer ]; then
+      PORT=443
+  else
+      PORT=80
+  fi
+  jupyterhub --port $PORT -f jup-config.py > jupyterhub.log 2>&1
+done
