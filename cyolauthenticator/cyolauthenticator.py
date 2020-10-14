@@ -10,31 +10,22 @@ import os
 import sys
 import re
 import pwd
-import PAM
-
-pam_passwd = None
-
-service = 'passwd'
-auth = PAM.pam()
-auth.start(service)
+from hmac import compare_digest
+from crypt import crypt
 
 # Attempt to authenticate using PAM
 def authuser(user, passw):
-    def pam_conv(auth, query_list, userData):
-        return [(passw, 0)]
-    if user != None:
-        auth.set_item(PAM.PAM_USER, user)
-    auth.set_item(PAM.PAM_CONV, pam_conv)
-    try:
-        auth.authenticate()
-        auth.acct_mgmt()
-        return True
-    except PAM.error as resp:
-        e = HTTPError(403)
-        e.my_message = "Incorrect password"
-        raise e
+    with open("/etc/shadow", "r") as fd:
+        for line in fd.readlines():
+            cols = line.split(':')
+            if cols[0] == user:
+                if compare_digest(crypt(passw, cols[1]), cols[1]):
+                  return True
+                else:
+                  break
     e = HTTPError(403)
-    e.my_message = "Login failure"
+    e.my_message = "Incorrect password"
+    raise e
 
 def mkuser(user, passw, passw2, code_check):
     if user == None or len(user.strip())=="":
