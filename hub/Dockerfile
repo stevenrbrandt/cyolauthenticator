@@ -1,9 +1,6 @@
 FROM ubuntu:18.04
 USER root
 
-# Set this to the Google Cloud Platform project name
-ARG GCP_PROJECT=research-technologies-testbed
-
 RUN apt-get update && \
   DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
   python3 python3-pip openssh-client \
@@ -54,21 +51,10 @@ RUN echo "slapd slapd/domain string hub" | debconf-set-selections && \
     echo "libpam-runtime  libpam-runtime/profiles multiselect     unix, ldap" | debconf-set-selections && \
     DEBIAN_FRONTEND=noninteractive dpkg-reconfigure slapd libpam-runtime
 
-## If you create a new Kubernetes cluster, you must do:
-# kubectl apply -f ../config/nfs-pv.yaml
-# kubectl apply -f ../config/nfs-pvc.yaml
-# Ensure the "gcloud config" steps below re-run.
-
-RUN gcloud config configurations create hub-config \
-    && gcloud config configurations activate hub-config \
-    && gcloud config set project $GCP_PROJECT
-
 # Copy service account credentials!
 # We instead assume the key is in /nfs/sys/svc.json
 # and authorize in startup.sh
 #COPY research-technologies-testbed-a786f12c5112.json /svc.json
-#&& gcloud auth activate-service-account --key-file /svc.json \
-#&& gcloud container clusters get-credentials your-first-cluster-1 --zone us-central1-a --project research-technologies-testbed \
 
 ## Convenience: ssh direct to root@hub with key...
 RUN apt install -y --no-install-recommends openssh-server
@@ -109,18 +95,11 @@ RUN cat jupyterhub.patch | (cd /usr/local/lib/python3.6/dist-packages && patch -
 # This list of EXPOSEd ports is not complete (and not required when running in Google Compute Engine)
 EXPOSE 80
 EXPOSE 8081
+EXPOSE 443
+EXPOSE 2222
 # per https://github.com/GoogleCloudPlatform/nfs-server-docker/blob/master/1/debian9/1.3/Dockerfile
 EXPOSE 2049/tcp
 EXPOSE 20048/tcp
-CMD bash startup-log.sh
 
-# gcloud beta compute --project=research-technologies-testbed instances create-with-container hub \
-#  --zone=us-central1-a --machine-type=n1-standard-1 --subnet=default --network-tier=PREMIUM \
-#  --metadata=google-logging-enabled=true --maintenance-policy=MIGRATE \
-#  --service-account=310980440256-compute@developer.gserviceaccount.com \
-#  --scopes=https://www.googleapis.com/auth/devstorage.read_only,https://www.googleapis.com/auth/logging.write,https://www.googleapis.com/auth/monitoring.write,https://www.googleapis.com/auth/servicecontrol,https://www.googleapis.com/auth/service.management.readonly,https://www.googleapis.com/auth/trace.append \
-#  --tags=hub,http-server --image=cos-stable-77-12371-114-0 --image-project=cos-cloud --boot-disk-size=10GB \
-#  --boot-disk-type=pd-standard --boot-disk-device-name=hub --disk=name=nfs-home,device-name=nfs-home,mode=rw,boot=no \
-#  --container-image=dstndstn/cyol --container-restart-policy=always --container-privileged \
-#  --container-mount-disk=mount-path=/nfs,name=nfs-home,mode=rw --labels=container-vm=cos-stable-77-12371-114-0
+CMD bash startup-log.sh
 

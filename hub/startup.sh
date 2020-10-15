@@ -4,23 +4,46 @@ cd /
 
 service ssh start
 
+# Set this to the Google Cloud Platform project name
+
+export GCP_PROJECT=schrodingers-hack
+export GCP_ZONE=us-central1-c
+# Kubernetes cluster
+export CLUSTER_NAME=cluster-1
+
 # Authorize to use kubernetes using service account,
 # assumed to be stored in /nfs/sys/svc.json
 export GOOGLE_APPLICATION_CREDENTIALS="/nfs/sys/svc.json"
-gcloud auth activate-service-account --key-file /nfs/sys/svc.json
+
+# activate gcp powers!
+gcloud auth activate-service-account --key-file $GOOGLE_APPLICATION_CREDENTIALS
 
 # GCP Project name.
 # You may need to do (interactively, unfortunately...)
 #   gcloud projects describe schrodingers-hack
 # before the following works.
 
-gcloud config set project schrodingers-hack
-gcloud config set compute/zone us-central1-c
-
-export CLUSTER_NAME=cluster-1
+gcloud config configurations create hub-config
+gcloud config configurations activate hub-config
+gcloud config set project $GCP_PROJECT
+gcloud config set compute/zone $GCP_ZONE
 
 gcloud container clusters get-credentials $CLUSTER_NAME
+
+## If you create a new Kubernetes cluster, you must do:
+kubectl apply -f nfs-pv.yaml
+kubectl apply -f nfs-pvc.yaml
+
 #gcloud config set container/use_client_certificate True
+
+# (Re-)add firewall entries.  This complains if they already exist.
+NET=$(gcloud container clusters describe $CLUSTER_NAME --format=get"(network)")
+IP=$(gcloud container clusters describe $CLUSTER_NAME --format=get"(clusterIpv4Cidr)")
+
+gcloud compute firewall-rules create allow-2222 --direction=INGRESS --priority=1000 --network="$NET" --action=ALLOW --rules=tcp:2222 --source-ranges=0.0.0.0/0
+gcloud compute firewall-rules create allow-80   --direction=INGRESS --priority=1000 --network="$NET" --action=ALLOW --rules=tcp:80   --source-ranges=0.0.0.0/0
+gcloud compute firewall-rules create allow-443  --direction=INGRESS --priority=1000 --network="$NET" --action=ALLOW --rules=tcp:443  --source-ranges=0.0.0.0/0
+gcloud compute firewall-rules create kube-to-all-vms-on-network --network="$NET" --source-ranges="$IP" --allow=tcp,udp,icmp,esp,ah,sctp
 
 # Reset the LDAP passwords
 slappasswd -g > /tmp/slappasswd
