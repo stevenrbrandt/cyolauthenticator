@@ -6,11 +6,21 @@ service ssh start
 
 # Authorize to use kubernetes using service account,
 # assumed to be stored in /nfs/sys/svc.json
+export GOOGLE_APPLICATION_CREDENTIALS="/nfs/sys/svc.json"
 gcloud auth activate-service-account --key-file /nfs/sys/svc.json
-gcloud container clusters get-credentials --zone us-central1-a \
-       --project research-technologies-testbed \
-       your-first-cluster-1
-gcloud config set container/use_client_certificate True
+
+# GCP Project name.
+# You may need to do (interactively, unfortunately...)
+#   gcloud projects describe schrodingers-hack
+# before the following works.
+
+gcloud config set project schrodingers-hack
+gcloud config set compute/zone us-central1-c
+
+export CLUSTER_NAME=cluster-1
+
+gcloud container clusters get-credentials $CLUSTER_NAME
+#gcloud config set container/use_client_certificate True
 
 # Reset the LDAP passwords
 slappasswd -g > /tmp/slappasswd
@@ -56,4 +66,5 @@ for ((;;)); do
       PORT=80
   fi
   jupyterhub --port $PORT -f jup-config.py > jupyterhub.log 2>&1
+  sleep 10
 done
