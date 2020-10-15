@@ -77,6 +77,6 @@ gcloud beta compute --project=research-technologies-testbed instances create-wit
 - The GCP Project name "research-technologies-testbed" is baked into
   the `dstndstn/cyol` container image, so if you want to change that
   name, you will need to rebuild the image, and change the container
-  name in the above VM-creation command line.  See also the `hub/startup.sh`
+  name in the above VM-creation command line.  See also the `hub/run.sh`
   script.
 
