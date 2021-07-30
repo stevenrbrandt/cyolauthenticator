@@ -2,8 +2,10 @@
 # however, if one does that then a Singularity version
 # of the image will not run on clusters with older
 # linux kernels.
-FROM ubuntu:16.04
+FROM ubuntu:20.04
 USER root
+
+ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update
 # python3-pam is needed for authuser.py
@@ -18,10 +20,9 @@ RUN pip install --upgrade pip==19.0.3
 
 RUN pip install oauthenticator==0.9.0 jupyter==1.0.0 jupyterhub==1.0.0 tornado==5.1.1 python-oauth2==1.1.1 jupyterhub-dummyauthenticator
 
-RUN curl -sL https://deb.nodesource.com/setup_8.x | bash -
 RUN apt-get -y install nodejs 
 
-RUN npm install -g configurable-http-proxy
+RUN npm install -g configurable-http-proxy@4.3.2
 
 # Edit the message in the h1 tags to customize your tutorial
 COPY login.html /usr/local/share/jupyterhub/templates/login.html
