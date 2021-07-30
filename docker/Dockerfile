@@ -16,13 +16,13 @@ RUN apt-get install -y python3 python3-pip openssh-client libssl-dev npm \
 RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 1
 RUN update-alternatives --install /usr/bin/pip pip /usr/bin/pip3 1
 
-RUN pip install --upgrade pip==19.0.3
+RUN pip install --upgrade pip
 
-RUN pip install oauthenticator==0.9.0 jupyter==1.0.0 jupyterhub==1.0.0 tornado==5.1.1 python-oauth2==1.1.1 jupyterhub-dummyauthenticator
+RUN pip install oauthenticator==14.1.0 jupyter==1.0.0 jupyterhub==1.4.2 tornado==6.1 python-oauth2==1.1.1 jupyterhub-dummyauthenticator
 
 RUN apt-get -y install nodejs 
 
-RUN npm install -g configurable-http-proxy@4.3.2
+RUN npm install -g configurable-http-proxy@4.5.0
 
 # Edit the message in the h1 tags to customize your tutorial
 COPY login.html /usr/local/share/jupyterhub/templates/login.html
@@ -34,8 +34,9 @@ COPY logo.png /usr/local/share/jupyterhub/static/images/logo.png
 #RUN mkdir -p /usr/local/lib/python3.5/dist-packages/cyolauthenticator
 #COPY cyol.py /usr/local/lib/python3.5/dist-packages/cyolauthenticator/__init__.py
 #COPY cyolauthenticator.py /usr/local/lib/python3.5/dist-packages/cyolauthenticator/cyolauthenticator.py
-RUN pip install cyolauthenticator
+RUN pip install cyolauthenticator randpass
 
 COPY startup.sh /
 COPY jup-config.py /
+COPY frame.py /usr/local/bin/
 CMD bash startup.sh

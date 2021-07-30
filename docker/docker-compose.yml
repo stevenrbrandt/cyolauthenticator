@@ -6,7 +6,7 @@ services:
     build:
         context: .
         dockerfile: Dockerfile
-    image: cyolauth
+    image: stevenrbrandt/cyolauth
     container_name: cyolauth
     hostname: cyolauthhost
     ports:

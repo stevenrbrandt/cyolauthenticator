@@ -1,5 +1,6 @@
 cd /
-echo jtest789 > /usr/enable_mkuser
+randpass MND -o /usr/enable_mkuser
+python /usr/local/bin/frame.py
 
 #cp --update /home/passwd /home/group /home/shadow /etc/
 
