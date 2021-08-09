@@ -38,5 +38,6 @@ RUN pip install cyolauthenticator randpass
 
 COPY startup.sh /
 COPY jup-config.py /
+COPY info.txt /
 COPY frame.py /usr/local/bin/
-CMD bash startup.sh
+CMD bash ./startup.sh
