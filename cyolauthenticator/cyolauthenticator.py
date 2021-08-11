@@ -125,6 +125,7 @@ def mkuser(user, passw, passw2, code_check):
     pipe.wait()
     print("Chpasswd called with %s:%s" % (user, passw))
     call(["cp","/etc/shadow","/home/shadow"])
+    call(["cp","/etc/passwd","/home/passwd"])
     return True
 
 class CYOLAuthenticator(Authenticator):

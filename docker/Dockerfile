@@ -10,7 +10,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
 # python3-pam is needed for authuser.py
 RUN apt-get install -y python3 python3-pip openssh-client libssl-dev npm \
-  gnupg policycoreutils python3-pam imagemagick curl vim
+  gnupg policycoreutils python3-pam imagemagick curl vim git
 
 # Make python3 the default
 RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 1
@@ -34,7 +34,8 @@ COPY logo.png /usr/local/share/jupyterhub/static/images/logo.png
 #RUN mkdir -p /usr/local/lib/python3.5/dist-packages/cyolauthenticator
 #COPY cyol.py /usr/local/lib/python3.5/dist-packages/cyolauthenticator/__init__.py
 #COPY cyolauthenticator.py /usr/local/lib/python3.5/dist-packages/cyolauthenticator/cyolauthenticator.py
-RUN pip install cyolauthenticator randpass
+RUN pip install randpass
+RUN pip install git+https://github.com/stevenrbrandt/cyolauthenticator
 
 COPY startup.sh /
 COPY jup-config.py /
