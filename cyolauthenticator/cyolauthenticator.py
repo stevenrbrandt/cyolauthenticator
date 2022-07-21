@@ -19,7 +19,7 @@ def authuser(user, passw):
         for line in fd.readlines():
             cols = line.split(':')
             if cols[0] == user:
-                if cols[1] is None or cols[1].strip() == "":
+                if passw is None or passw.strip() == "":
                     e = HTTPError(403)
                     e.my_message = f"No password for account {user}"
                     raise e
