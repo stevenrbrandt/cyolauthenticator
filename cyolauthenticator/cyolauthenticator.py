@@ -19,11 +19,16 @@ def authuser(user, passw):
         for line in fd.readlines():
             cols = line.split(':')
             if cols[0] == user:
-                if passw is None or passw.strip() == "":
+                if passw is None or cols[1] is None:
                     e = HTTPError(403)
                     e.my_message = f"No password for account {user}"
                     raise e
-                if compare_digest(crypt(passw, cols[1]), cols[1]):
+                crypt_result = crypt(passw, cols[1])
+                if crypt_result is None:
+                    e = HTTPError(403)
+                    e.my_message = f"No password for account {user}"
+                    raise e
+                if compare_digest(crypt_result , cols[1]):
                   return True
                 else:
                   break
