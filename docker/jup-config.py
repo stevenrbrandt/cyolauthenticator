@@ -37,6 +37,9 @@ try:
     print("Starting with SSL")
     c.JupyterHub.ssl_cert = cer
     c.JupyterHub.ssl_key =  key
+    print("Starting with SSL")
+    print("Cert:",cer)
+    print("Key:",key)
   else:
     print("Starting without SSL")
 

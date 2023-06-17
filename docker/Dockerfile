@@ -20,6 +20,7 @@ RUN  bash /usr/local/sbin/sssd.conf.sh
 RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 1
 RUN update-alternatives --install /usr/bin/pip pip /usr/bin/pip3 1
 
+RUN apt install -y python3-sqlalchemy
 RUN pip install --upgrade pip
 
 RUN pip install oauthenticator==14.1.0 jupyter==1.0.0 jupyterhub==1.4.2 tornado==6.1 python-oauth2==1.1.1 jupyterhub-dummyauthenticator
@@ -41,9 +42,9 @@ COPY logo.png /usr/local/share/jupyterhub/static/images/logo.png
 
 RUN pip install randpass
 RUN pip install git+https://github.com/stevenrbrandt/cyolauthenticator
-COPY cyol.tgz ./
+#COPY cyol.tgz ./
 #RUN tar xzf cyol.tgz 
-RUN python3 setup.py install
+#RUN python3 setup.py install
 
 
 COPY startup.sh /
