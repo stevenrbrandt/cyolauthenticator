@@ -1,14 +1,32 @@
 version: '3'
 
 services:
+  ldapservice:
+    build:
+        context: ldapserver
+        dockerfile: Dockerfile
+    image: ldapimmage
+    hostname: ldapserver.cyolauth.org
+    container_name: ldapserver
+    #environment:
+    #    - LDAP_ORGANISATION=rahasak
+    #    - LDAP_DOMAIN=rahasak.com
+    #    - "LDAP_BASE_DN=dc=rahasak,dc=com"
+    #    - LDAP_ADMIN_PASSWORD=rahasak
+    env_file:
+        - ldap-vars.env
 
-  cyolauth:
+  cyolauthservice:
     build:
         context: .
         dockerfile: Dockerfile
     image: stevenrbrandt/cyolauth
     container_name: cyolauth
-    hostname: cyolauthhost
+    hostname: cyolauthhost.cyolauth.org
+    volumes:
+        - /home/sbrandt/repos/cyolauthenticator:/usr/local/lib/python3.8/dist-packages/cyolauthenticator
+    env_file:
+        - ldap-vars.env
     ports:
       - 9443:443
       - 9080:80

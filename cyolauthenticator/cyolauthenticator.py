@@ -12,26 +12,32 @@ import re
 import pwd
 from hmac import compare_digest
 from crypt import crypt
+from .useradd import user_add
+from .chpasswd import change_passwd
+from .chkpasswd import check_passwd
 
 # Attempt to authenticate using PAM
 def authuser(user, passw):
-    with open("/etc/shadow", "r") as fd:
-        for line in fd.readlines():
-            cols = line.split(':')
-            if cols[0] == user:
-                if passw is None or cols[1] is None:
-                    e = HTTPError(403)
-                    e.my_message = f"No password for account {user}"
-                    raise e
-                crypt_result = crypt(passw, cols[1])
-                if crypt_result is None:
-                    e = HTTPError(403)
-                    e.my_message = f"No password for account {user}"
-                    raise e
-                if compare_digest(crypt_result , cols[1]):
-                  return True
-                else:
-                  break
+#    with open("/etc/shadow", "r") as fd:
+#        for line in fd.readlines():
+#            cols = line.split(':')
+#            if cols[0] == user:
+#                if passw is None or cols[1] is None:
+#                    e = HTTPError(403)
+#                    e.my_message = f"No password for account {user}"
+#                    raise e
+#                crypt_result = crypt(passw, cols[1])
+#                if crypt_result is None:
+#                    e = HTTPError(403)
+#                    e.my_message = f"No password for account {user}"
+#                    raise e
+#                if compare_digest(crypt_result , cols[1]):
+#                  return True
+#                else:
+#                  break
+    r = check_passwd(user, passw)
+    if r == 0:
+        return True
     e = HTTPError(403)
     e.my_message = "Incorrect password"
     raise e
@@ -125,17 +131,20 @@ def mkuser(user, passw, passw2, code_check):
         e = HTTPError(403)
         e.my_message = "Password and Password2 do not match."
         raise e
-    call(cmd)
-    call(["su","-",user,"-c","bash /inituser.sh"])
+    #call(cmd)
+    useradd(user)
+    if os.path.exists("/inituser.sh"):
+        call(["su","-",user,"-c","bash /inituser.sh"])
 
-    pipe = Popen(["chpasswd"],stdin=PIPE,universal_newlines=True)
-    pipe.stdin.write("%s:%s\n" % (user, passw))
-    pipe.stdin.close()
-    pipe.wait()
-    print("Chpasswd called with %s:%s" % (user, passw))
-    call(["cp","/etc/shadow","/home/shadow"])
-    call(["cp","/etc/passwd","/home/passwd"])
-    call(["cp","/etc/group","/home/group"])
+    #pipe = Popen(["chpasswd"],stdin=PIPE,universal_newlines=True)
+    #pipe.stdin.write("%s:%s\n" % (user, passw))
+    #pipe.stdin.close()
+    #pipe.wait()
+    r  = change_passwd(user, passw)
+    #print("Chpasswd called with %s:%s" % (user, passw))
+    #call(["cp","/etc/shadow","/home/shadow"])
+    #call(["cp","/etc/passwd","/home/passwd"])
+    #call(["cp","/etc/group","/home/group"])
     return True
 
 class CYOLAuthenticator(Authenticator):
