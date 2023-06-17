@@ -2,6 +2,7 @@ from traitlets import Unicode
 
 from jupyterhub.auth import Authenticator
 
+from traceback import print_exc
 from subprocess import call, Popen, PIPE
 from tornado.httpclient import HTTPError
 from tornado import gen
@@ -131,20 +132,25 @@ def mkuser(user, passw, passw2, code_check):
         e = HTTPError(403)
         e.my_message = "Password and Password2 do not match."
         raise e
-    #call(cmd)
-    useradd(user)
-    if os.path.exists("/inituser.sh"):
-        call(["su","-",user,"-c","bash /inituser.sh"])
+    try:
+        #call(cmd)
+        user_add(user)
+        if os.path.exists("/inituser.sh"):
+            call(["su","-",user,"-c","bash /inituser.sh"])
 
-    #pipe = Popen(["chpasswd"],stdin=PIPE,universal_newlines=True)
-    #pipe.stdin.write("%s:%s\n" % (user, passw))
-    #pipe.stdin.close()
-    #pipe.wait()
-    r  = change_passwd(user, passw)
-    #print("Chpasswd called with %s:%s" % (user, passw))
-    #call(["cp","/etc/shadow","/home/shadow"])
-    #call(["cp","/etc/passwd","/home/passwd"])
-    #call(["cp","/etc/group","/home/group"])
+        #pipe = Popen(["chpasswd"],stdin=PIPE,universal_newlines=True)
+        #pipe.stdin.write("%s:%s\n" % (user, passw))
+        #pipe.stdin.close()
+        #pipe.wait()
+        r  = change_passwd(user, passw)
+        #print("Chpasswd called with %s:%s" % (user, passw))
+        #call(["cp","/etc/shadow","/home/shadow"])
+        #call(["cp","/etc/passwd","/home/passwd"])
+        #call(["cp","/etc/group","/home/group"])
+    except:
+        print("An exception occurred")
+        print_exc()
+        return False
     return True
 
 class CYOLAuthenticator(Authenticator):
