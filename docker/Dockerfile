@@ -41,7 +41,7 @@ COPY logo.png /usr/local/share/jupyterhub/static/images/logo.png
 #COPY cyolauthenticator.py /usr/local/lib/python3.5/dist-packages/cyolauthenticator/cyolauthenticator.py
 
 RUN pip install randpass
-RUN pip install git+https://github.com/stevenrbrandt/cyolauthenticator
+RUN pip install  git+https://github.com/stevenrbrandt/cyolauthenticator
 #COPY cyol.tgz ./
 #RUN tar xzf cyol.tgz 
 #RUN python3 setup.py install

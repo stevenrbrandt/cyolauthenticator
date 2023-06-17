@@ -1,4 +1,10 @@
 mkdir -p /etc/sssd
+
+# Don't reinstall
+if [ -d /etc/sssd/sssd.conf ]
+then return
+fi
+
 cat > /etc/sssd/sssd.conf << EOF
 [sssd]
 config_file_version = 2

@@ -1,5 +1,10 @@
 version: '3'
 
+volumes:
+    home:
+    ldap_data:
+    slapd_data:
+
 services:
   ldapservice:
     build:
@@ -8,6 +13,9 @@ services:
     image: ldapimmage
     hostname: ldapserver.cyolauth.org
     container_name: ldapserver
+    ## The following environment variables
+    ## are required. We suggest you create
+    ## an ldap-vars.env and configure them.
     #environment:
     #    - LDAP_ORGANISATION=rahasak
     #    - LDAP_DOMAIN=rahasak.com
@@ -15,12 +23,14 @@ services:
     #    - LDAP_ADMIN_PASSWORD=rahasak
     env_file:
         - ldap-vars.env
+    volumes:
+        - ldap_data:/var/lib/ldap
+        - slapd_data:/etc/ldap/slapd.d
 
   cyolauthservice:
     build:
         context: .
         dockerfile: Dockerfile
-    entrypoint: sleep infinity
     image: stevenrbrandt/cyolauth
     container_name: cyolauth
     hostname: cyolauthhost.cyolauth.org
@@ -31,3 +41,5 @@ services:
     ports:
       - 9443:443
       - 9080:80
+    volumes:
+      - home:/home

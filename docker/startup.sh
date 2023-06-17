@@ -1,14 +1,8 @@
 cd /
 randpass MND -o /usr/enable_mkuser
+chmod 600 /usr/enable_mkuser
 python /usr/local/bin/frame.py
 
-for f in passwd shadow
-do
-    if [ -r /home/${f} ]
-    then
-        cp /home/${f} /etc/${f}
-    fi
-done
 bash /usr/local/sbin/sssd.conf.sh
 service sssd start
 
@@ -24,5 +18,5 @@ export PYTHONPATH=/usr/local/lib/python$(python3 -c 'import sys; print("%d.%d" %
 PORT=443
 echo jupyterhub --ip 0.0.0.0 --port $PORT -f jup-config.py
 jupyterhub --ip 0.0.0.0 --port $PORT -f jup-config.py
-echo jupyterhub exited
+echo jupyterhub exited!
 sleep infinity
