@@ -1,16 +1,11 @@
 version: '3'
 
-volumes:
-    home:
-    ldap_data:
-    slapd_data:
-
 services:
   ldapservice:
     build:
         context: ldapserver
         dockerfile: Dockerfile
-    image: ldapimmage
+    image: stevenrbrandt/ldapimmage
     hostname: ldapserver.cyolauth.org
     container_name: ldapserver
     ## The following environment variables
@@ -24,8 +19,8 @@ services:
     env_file:
         - ldap-vars.env
     volumes:
-        - ldap_data:/var/lib/ldap
-        - slapd_data:/etc/ldap/slapd.d
+        - /home/sbrandt/tmp/ldap_data:/var/lib/ldap
+        - /home/sbrandt/tmp/slapd_data:/etc/ldap/slapd.d
 
   cyolauthservice:
     build:
@@ -34,12 +29,13 @@ services:
     image: stevenrbrandt/cyolauth
     container_name: cyolauth
     hostname: cyolauthhost.cyolauth.org
-    volumes:
-        - /home/sbrandt/repos/cyolauthenticator:/usr/local/lib/python3.8/dist-packages/cyolauthenticator
     env_file:
         - ldap-vars.env
     ports:
       - 9443:443
       - 9080:80
+    entrypoint: sleep infinity
     volumes:
-      - home:/home
+      - /home/sbrandt/repos/cyolauthenticator:/root/cyolauthenticator
+      - /home/brandt/tmp/home:/home
+      - ./tls:/etc/pki/tls

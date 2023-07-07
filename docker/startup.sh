@@ -1,3 +1,11 @@
+cd /root
+if [ ! -d cyolauthenticator ]
+then
+    git clone https://github.com/stevenrbrandt/cyolauthenticator
+fi 
+cd /root/cyolauthenticator
+python3 setup.py install
+
 cd /
 randpass MND -o /usr/enable_mkuser
 chmod 600 /usr/enable_mkuser
@@ -17,6 +25,7 @@ export PYTHONPATH=/usr/local/lib/python$(python3 -c 'import sys; print("%d.%d" %
 
 PORT=443
 echo jupyterhub --ip 0.0.0.0 --port $PORT -f jup-config.py
+# jupyterhub --log-level=50 --ip 0.0.0.0 --port $PORT -f jup-config.py
 jupyterhub --ip 0.0.0.0 --port $PORT -f jup-config.py
 echo jupyterhub exited!
 sleep infinity

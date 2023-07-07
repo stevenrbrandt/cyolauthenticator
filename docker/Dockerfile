@@ -14,7 +14,7 @@ RUN apt-get install -y python3 python3-pip openssh-client libssl-dev npm \
   ldap-utils vim sssd-ldap perl-modules-5.30 libpam-ldapd apt-file dialog ca-certificates libnss-ldap libpam-modules libpam-sss
 
 COPY sssd.conf.sh /usr/local/sbin/sssd.conf.sh
-RUN  bash /usr/local/sbin/sssd.conf.sh
+#RUN  bash /usr/local/sbin/sssd.conf.sh
 
 # Make python3 the default
 RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 1

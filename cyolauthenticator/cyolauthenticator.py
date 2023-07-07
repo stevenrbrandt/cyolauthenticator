@@ -10,10 +10,9 @@ from os import stat
 import os
 import sys
 import re
-import pwd
 from hmac import compare_digest
 from crypt import crypt
-from .useradd import user_add
+from .useradd import user_add, get_user_data
 from .chpasswd import change_passwd
 from .chkpasswd import check_passwd
 
@@ -87,12 +86,17 @@ def mkuser(user, passw, passw2, code_check):
     #home = "/home/%s" % user
     #cmd = ["useradd",user,"-s","/bin/bash"]
     check_pass2 = False
-    try:
-      pwd.getpwnam(user)
+    udata = get_user_data(user)
+    if udata is not None:
+      if len(udata.pw_passwd)==1:
+            user_add(user)
+            change_passwd(user, passw)
+      print(f"get_user_data({user}) succeeded")
       return authuser(user, passw)
       # The user already exists, nothing to do
       #return uid
-    except KeyError:
+    else:
+      print("No user data")
       check_pass2 = True
 
     if not os.path.exists("/usr/enable_mkuser"):
@@ -109,19 +113,6 @@ def mkuser(user, passw, passw2, code_check):
       e.my_message = "Password and Password2 do not match."
       raise e
     #cmd += ["-m"]
-    uids = set()
-    for path in os.listdir("/home"):
-      u = stat("/home/%s" % path).st_uid
-      uids.add(u)
-    for u in range(1000,100000):
-      if u in uids:
-        continue
-      try:
-        pwd.getpwuid(u)
-      except KeyError:
-        uid = u
-        #cmd += ["-u",str(uid)]
-        break
 
     if check_pass2:
       if passw != passw2:
@@ -150,6 +141,16 @@ def mkuser(user, passw, passw2, code_check):
     return True
 
 class CYOLAuthenticator(Authenticator):
+
+    @staticmethod
+    def _getpwnam(name):
+        """Wrapper function to protect against `pwd` not being available
+        on Windows
+        """
+        import pwd
+
+        return get_user_data(name)
+
     password = Unicode(
         None,
         allow_none=True,
